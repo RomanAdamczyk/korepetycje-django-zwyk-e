@@ -1,0 +1,5 @@
+{% if hint %}
+  <div class="alert alert-info">{{ hint }}</div>
+{% elif error %}
+  <div class="alert alert-warning">{{ error }}</div>
+{% endif %}

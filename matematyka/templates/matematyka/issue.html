@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+
+{% block content %}
+
+<div class="task-content">
+    {{description|safe}}
+
+
+
+    <form method="post" action="{% url 'answer'  task_id=issue.task.id %}">
+        {% csrf_token %}
+         
+        <div class="row row-cols-1 row-cols-md-2 g-3">
+            {% for answer in answer_options %}
+            <div class="col">
+                <input type="radio" class="btn-check" name="answer" id="answer{{ forloop.counter }}"
+                    value="{{ answer.id }}" required>
+                <label class="btn btn-outline-custom w-100 p-3 text-start" for="answer{{ forloop.counter }}">
+                    {% if answer.format == 'symbolic' %}
+                    \( {{ answer.content | safe }} \)
+                    {% elif answer.format == 'numeric' %}
+                    {{ answer.content }}
+                    {% else %}
+                    błąd
+                    {% endif %}
+                </label>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="mt-4">
+            <button type="submit" class="btn btn-success">Zatwierdź</button>
+        </div>
+    </form>
+
+    <button class="btn btn-warning" type="button" data-bs-toggle="collapse" data-bs-target="#hintBox"
+        hx-get="{% url 'get_hint' issue.task.id %}" hx-target="#hintBox" hx-swap="innerHTML">
+        Pokaż wskazówkę
+    </button>
+</div>
+<div class="collapse mt-3" id="hintBox">
+
+</div>
+
+
+
+{% endblock %}

@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+
+{% block header %}
+{% endblock %}
+
+{% block content %}
+{% block title %}
+{% if category %}
+Zadania z kategorii {{ category.name }}
+{% elif exam %}
+Zadania z egzaminu {{ exam.level }} {{ exam.date }} ({{ exam.source }})
+{% endif %}
+{% endblock %}
+
+<div class="container custom-grid text-black">
+    <div class="row">
+        <div class="col-lg-2">Egzamin</div>
+        <div class="col-lg-1">Data</div>
+        <div class="col-lg-1">Źródło</div>
+        <div class="col-lg-1">Nr zadania</div>
+        <div class="col-lg-1">Punkty</div>
+        <div class="col-lg-2">Poziom</div>
+        <div class="col-lg-2">Zmienne oryginalne</div>
+        <div class="col-lg-2">Zmienne losowe</div>
+    </div>
+    {% for task in tasks %}
+    <div class="row">
+        <div class="col-lg-2">
+            <div class="list-group-item list-group-item-action short-content text-black">
+                {{ task.task.task_level.exam_level }}
+            </div>
+        </div>
+        <div class="col-lg-1">
+            <div class="list-group-item list-group-item-action short-content text-black">
+                {{ task.task.exam_date }}
+            </div>
+        </div>
+        <div class="col-lg-1">
+            <div class="list-group-item list-group-item-action short-content text-black">
+                {{ task.task.source }}
+            </div>
+        </div>
+        <div class="col-lg-1">
+            <div class="list-group-item list-group-item-action short-content text-black">
+                zad {{ task.task.sub_number }}
+            </div>
+        </div>
+        <div class="col-lg-1">
+            <div class="list-group-item list-group-item-action short-content text-black">
+                {{ task.task.points }} pkt
+            </div>
+        </div>
+        <div class="col-lg-2">
+            <div class="list-group-item list-group-item-action short-content text-black">
+                {{ task.task.task_level.school_level }} kl.{{ task.task_level.class_number }}
+            </div>
+        </div>
+        <div class="col-lg-2">
+            <div class="list-group-item list-group-item-action short-content text-black">
+
+                <a href="{% url 'start_issue' task.task.id %}" class="btn btn-warning">
+                    {% if user.is_authenticated %}
+                    {{ task.total_attempts_original }} / {{ task.correct_attempts_original }}
+                    {% else %}
+                    Start
+                    {% endif %}
+                </a>
+                <div id="wynik"></div>
+            </div>
+        </div>
+        <div class="col-lg-2">
+            <div class="list-group-item list-group-item-action short-content text-black">
+
+                <a href="{% url 'start_issue' task.task.id %}?random=true" , class="btn btn-warning">
+                    {% if user.is_authenticated %}
+                    {{ task.total_attempts_random }} / {{ task.correct_attempts_random }}
+                    {% else %}
+                    Start
+                    {% endif %}
+                </a>
+                <div id="wynik"></div>
+            </div>
+        </div>
+
+    </div>
+    {% endfor %}
+</div>
+
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block header %}
+<h3>{% block title %}Matury{% endblock %}</h3>
+{% endblock %}
+
+{% block content %}
+
+<div class="container custom-grid text-black">
+    <div class="row fw-bold">
+        <div class="col-lg-9">Matura</div>
+        <div class="col-lg-3">Ilość zadań</div>
+    </div>
+
+    {% for date, exams in grouped_exams.items %}
+    {% for name, count, source in exams %}
+    <div class="row">
+        <div class="col-lg-9">
+            <a href="{% url 'exam_tasks' exam_level=name exam_date=date|date:'Y-m-d' source=source %}" class="d-block text-decoration-none link-dark">
+                {{ name }} - {{ date|date:"Y-m-d" }} {{ source }}
+            </a>    
+        </div>
+        <div class="col-lg-3">{{ count }}</div>
+    </div>
+    {% endfor %}
+    {% endfor %}
+</div>
+
+{% endblock %}

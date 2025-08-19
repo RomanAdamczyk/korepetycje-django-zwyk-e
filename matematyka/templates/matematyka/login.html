@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-center align-items-start" style="min-height: 100vh; padding-top: 10vh;">
+    <div class="card text-dark bg-yellow" style="width: 21rem; min-height: 48vh;">
+        <div class="card-header text-center">
+            Logowanie
+        </div>
+        <div class="card-body d-flex flex-column justify-content-center">
+            <form method="post">
+                {% csrf_token %}
+                <div>Login: {{ form.username }}</div>
+                <br>
+                <div>Haslo: {{ form.password }}</div>
+                <br>
+                <div class="d-flex justify-content-center">
+                    <button type="submit">Zaloguj</button>
+                </div>
+                <input type="hidden" name="next" value="{{ next }}">
+            </form>
+        </div>
+        <div class="card-footer text-center">
+            Jeśli nie masz jeszcze konta <a href="{% url 'register' %}">zarejestruj się</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

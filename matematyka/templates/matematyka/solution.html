@@ -1,0 +1,5 @@
+{% if solution %}
+<div class="alert alert-info">{{ solution|safe }}</div>
+{% elif error %}
+<div class="alert alert-warning">{{ error }}</div>
+{% endif %}
