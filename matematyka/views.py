@@ -64,9 +64,20 @@ class RegisterView(generic.CreateView):
 
 class CategoryListView(generic.ListView):
     """
-    Displaying a list of math problem categories.
-    For each category included in the context of assigned tasks ("task_count"),
-    allowing you to see, for example, how many tasks a given category contains.
+    Display a list of math problem categories.
+
+    This view retrieves all categories from the database and attaches an
+    additional attribute `task_count` to each category. The value of
+    `task_count` represents the number of tasks assigned to the category.
+
+    Attributes:
+        model (Category): The model representing math categories.
+        template_name (str): The template used to render the category list.
+        context_object_name (str): The name of the context variable passed to the template.
+
+    Methods:
+        get_context_data(**kwargs):
+            Extend the default context by adding the number of tasks for each category.
     """
 
     model = Category
@@ -80,6 +91,32 @@ class CategoryListView(generic.ListView):
         return context
     
 class CategoryTasksView(generic.DetailView):
+    """
+    Display all tasks belonging to a specific category.
+
+    This view retrieves a category based on its primary key (pk) and lists
+    all associated tasks. It stores the origin of the request in the session
+    to allow easy navigation back to the category list. Users can view each
+    task with either original variables or randomized variables. 
+
+    For authenticated users, the view also includes their attempts and
+    results, showing statistics of correct and incorrect answers for
+    both original and randomized versions of tasks.
+
+    Attributes:
+        model (Category): The model representing math categories.
+        template_name (str): The template used to render the category tasks.
+        context_object_name (str): The name of the context variable passed to the template.
+
+    Methods:
+        get(request, *args, **kwargs):
+            Handles GET requests, retrieves the category object,
+            and stores the request origin in the session.
+        get_context_data(**kwargs):
+            Extends the default context with tasks and user attempt statistics
+            (total and correct attempts for both original and randomized tasks).
+    """
+ 
     model = Category
     template_name = 'matematyka/category_tasks.html'
     context_object_name = 'category'
@@ -135,6 +172,57 @@ class CategoryTasksView(generic.DetailView):
         return context
     
 class StartIssueView(generic.View):
+    """
+    Start a new issue for a given task.
+    
+    This view handles the creation of a new issue for a task, either with
+    random or original variables. It retrieves the task based on the provided
+    task_id and checks if an issue already exists in the session. If it does,
+    it uses the existing issue; otherwise, it creates a new one. The view also
+    retrieves the variables associated with the task, either randomizing them
+    or using their original values. It builds the answer options based on the
+    task's answer options and the variables used in the issue. The task's
+    description is rendered with the variables, and the context is prepared
+    for rendering the issue template.
+    The view also handles the case where the user has previously submitted an
+    issue and retrieves the variables used in that issue to display the
+    four answer options.
+
+    Methods:
+
+        get(request, task_id):
+        Handles GET requests to start an issue for a specific task.
+        It checks for an existing issue in the session, creates a new issue if
+        none exists, and retrieves the task's variables and answer options.
+        It renders the task's description with the variables and prepares the
+        context for rendering the issue template.
+        
+        build_solutions_map(issue, additional_variables, value_map):
+        Builds a map of solutions for the issue based on additional variables
+        and the value map of variables used in the issue. It evaluates the
+        additional variables' formulas using the value map and stores the
+        results in the UsedVariable model. It returns a dictionary of symbols
+        and substitutions for rendering the answer options.
+
+        build_answer_options(answer_options_db, solutions_map, value_map, substitutions):
+        Builds a list of answer options for the issue based on the task's
+        answer options. It evaluates the content of each answer option using
+        the solutions map and value map. The answer options are formatted
+        according to their display format (symbolic or numeric) and shuffled
+        before being returned. The method also handles the case where the
+        content is symbolic or numeric, rendering it with the appropriate
+        context. It returns a list of dictionaries containing the answer
+        option's ID, content, correctness, and format.
+        
+        randomize_variables(task):
+        Randomizes the variables for a given task. It retrieves the variables
+        associated with the task and randomly selects a value for each variable
+        from its choices or generates a range of values. The method updates
+        the original value of each variable with the randomly selected value.
+        It returns the list of variables with their new randomized values.
+        
+    """
+
 
     def get(self, request, task_id):
         issue = None
