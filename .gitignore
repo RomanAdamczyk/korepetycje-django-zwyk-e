@@ -6,3 +6,25 @@ __pycache__/
 .env
 
 .pytest_cache/
+
+# logi
+*.log
+
+# test coverage
+htmlcov/
+.coverage
+.coverage.*
+.cache
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Django stuff
+db.sqlite3
+media/
+
+# systemowe
+.DS_Store
+Thumbs.db

@@ -164,7 +164,8 @@ class Variable(models.Model):
         choices (dict): Possible choices for the variable, stored as a dictionary (JSONField).
         min_value (float): Minimum value for the variable.
         max_value (float): Maximum value for the variable.
-        step (float): Step value for the variable.'''
+        step (float): Step value for the variable.
+        unique_group (str): Grouping identifier for unique variable sets.'''
 
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='variables', null=True, blank=True)
     name = models.CharField(max_length=100)
@@ -173,6 +174,7 @@ class Variable(models.Model):
     min_value = models.FloatField(null=True, blank=True)
     max_value = models.FloatField(null=True, blank=True)
     step = models.FloatField(null=True, blank=True)
+    unique_group = models.CharField(max_length=100, null=True, blank=True)
 
     class Meta:
         unique_together = ('task', 'name')

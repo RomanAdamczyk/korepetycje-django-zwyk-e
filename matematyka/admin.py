@@ -62,7 +62,7 @@ class AssignedTaskAdmin(admin.ModelAdmin):
     list_filter = ['assigned_date', 'deadline']
 
 class VariableAdmin(admin.ModelAdmin):
-    list_display = ['id', 'task_id', 'name', 'min_value', 'max_value','step','choices', 'original_value']
+    list_display = ['id', 'task_id', 'name', 'min_value', 'max_value','step','choices', 'original_value', 'unique_group']
 
     def task_id(self, obj):
         return obj.task.id
@@ -104,7 +104,7 @@ class UserAnswerAdmin(admin.ModelAdmin):
     list_filter = ['used_hint']
     
 class SolutionAdmin(admin.ModelAdmin):
-    list_display = ['id', 'task', 'content']
+    list_display = ['id', 'task'] #, 'content']
     search_fields = ['task']
     list_filter = ['task']
 
