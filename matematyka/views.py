@@ -370,6 +370,7 @@ class StartIssueView(generic.View):
     
     def randomize_variables(self, task):
         variables = Variable.objects.filter(task=task)
+        choices_dict= {}
         for variable in variables:
             if variable.choices:
                 choices = variable.choices
@@ -377,10 +378,35 @@ class StartIssueView(generic.View):
                 choices = []
                 for var in np.arange(variable.min_value, variable.max_value + variable.step, variable.step):
                     choices.append(str(round(var, 4)))
+            
+            choices_dict[variable.id] = choices
 
-            random_choice = random.choice(choices)
-            variable.original_value = random_choice
+        groups = defaultdict(list)
+        for variable in variables:
+            group = getattr(variable, 'unique_group', None)
+            if group:
+                groups[group].append(variable)
+            else:
+                random_choice = random.choice(choices_dict[variable.id])  #without group
+                variable.original_value = random_choice
 
+        for group_name, group_vars in groups.items():
+            max_attempts = 1000  # protection against infinite loop
+            attempts = 0
+            while attempts < max_attempts:
+                values = {}
+                unique = True
+                for variable in group_vars:
+                   choice = random.choice(choices_dict[variable.id])
+                   values[variable.id] = choice
+
+                if len(set(values.values())) == len(values):
+                    for variable in group_vars:
+                        variable.original_value = values[variable.id]
+                    break
+                attempts += 1
+            else:
+                raise Exception(f"Nie można wygenerować unikalnych wartości dla grupy zmiennych: {group_name}")
         return variables
 
 class GetHintView(generic.View):
