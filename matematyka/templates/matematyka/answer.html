@@ -25,13 +25,18 @@
                 bg-yellow text-dark
             {% endif %}
         ">
-                {% if answer.format == 'symbolic' %}
-                \( {{ answer.content | safe }} \)
-                {% elif answer.format == 'numeric' %}
-                {{ answer.content }}
-                {% else %}
-                błąd
-                {% endif %}
+                <label class="btn btn-outline-custom w-100 p-3 text-start" for="answer{{ forloop.counter }}">
+                    {% if answer.format == 'symbolic' %}
+                    <span class="math-render">$$ {{ answer.content | safe }} $$</span>
+                    {% elif answer.format == 'numeric' %}
+                    <span class="math-render">{{ answer.content }}</span>
+                    {% elif answer.format == 'text' %}
+                    <span class="plain-text">{{ answer.content | safe }}</span>
+                    {% else %}
+                    <span class="plain-text">{{ answer.content | safe }}</span>
+                    <!-- Fallback pokazuje surowy content -->
+                    {% endif %}
+                </label>
             </div>
         </div>
         {% endfor %}

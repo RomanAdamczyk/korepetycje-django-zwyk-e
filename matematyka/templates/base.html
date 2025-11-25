@@ -84,20 +84,22 @@
     <!-- MathJax w HTMX-->
     <script>
         document.body.addEventListener('htmx:afterSwap', () => {
-            if (window.MathJax) {
-                MathJax.typeset();
+            if (window.MathJax && window.MathJax.typesetPromise) {
+                MathJax.typesetPromise([document.querySelectorAll('.math-render')]).then(() => {
+                    console.log('MathJax rendered after swap');
+                }).catch(err => console.error('MathJax error:', err));
             }
         });
     </script>
     <script>
         window.addEventListener('load', () => {
-            if (window.MathJax) {
-                MathJax.typeset();
+            if (window.MathJax && window.MathJax.typesetPromise) {
+                MathJax.typesetPromise([document.querySelectorAll('.math-render')]).then(() => {
+                    console.log('MathJax initial render done');
+                }).catch(err => console.error('MathJax error:', err));
             }
         });
     </script>
-
-
 </body>
 
 </html>

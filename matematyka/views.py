@@ -353,11 +353,18 @@ class StartIssueView(generic.View):
             elif opt.display_format == 'numeric':
                 expr = sympify(opt.content,locals=solutions_map)
                 content = expr.evalf(subs=substitutions)
-                print("yyy")
-                print(expr)
-                print(content)
                 if float(content) == int(content):
                     content= int(content)
+
+            elif opt.display_format == 'text':
+                raw_description = opt.content
+                template = Template(raw_description)
+                content = template.render(Context(value_map))
+                print(f"text for {opt.id}: {opt.display_format} -> {content}")
+            
+            else:
+                content = opt.content
+                print(f"Fallback for {opt.id}: {opt.display_format} -> {content}")
 
             answer_options.append({
                 'id': opt.id,
@@ -448,17 +455,17 @@ class GetSolutionView(generic.View):
             return render(request, 'matematyka/solution.html', {'error': 'Brak rozwiązania dla tego zadania'})
 
         issue_id = request.session.get('submitted_issue_id')
-        print(f"Issue ID: {issue_id}")
+        # print(f"Issue ID: {issue_id}")
         variables = list(UsedVariable.objects.filter(issue__id=issue_id))
-        print(f"Variables: {variables}")
+        # print(f"Variables: {variables}")
         value_map = {var.variable_name: var.variable_value for var in variables}
-        print(f"Value Map: {value_map}")
+        # print(f"Value Map: {value_map}")
         rendered_solution = solution.content
-        print(f"Raw Solution: {rendered_solution}")
+        # print(f"Raw Solution: {rendered_solution}")
         template_solution = Template(rendered_solution)
-        print(f"Template Solution: {template_solution}")
+        # print(f"Template Solution: {template_solution}")
         rendered_solution = template_solution.render(Context(value_map))
-        print(f"Rendered Solution: {rendered_solution}")
+        # print(f"Rendered Solution: {rendered_solution}")
 
         return render(request, 'matematyka/solution.html', {'solution': rendered_solution})
 

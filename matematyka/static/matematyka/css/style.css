@@ -8,15 +8,18 @@
 /* Podstawowy font i tło strony */
 html,
 body {
-    background-color: rgb(98, 165, 100); /* zielone tło strony */
-    color: white;              /* domyślny kolor tekstu */
+    background-color: rgb(98, 165, 100);
+    /* zielone tło strony */
+    color: white;
+    /* domyślny kolor tekstu */
     font-family: Arial, Helvetica, sans-serif;
     line-height: 1.6;
 }
 
 /* Nagłówek strony */
 header {
-    background-color: black; /* czarne tło */
+    background-color: black;
+    /* czarne tło */
     color: white;
     padding: 1rem;
     width: 100%;
@@ -135,12 +138,14 @@ input[type="submit"]:hover {
     padding: 1rem;
     margin-bottom: 1rem;
     border-radius: 4px;
-    color: black; /* zgodnie z przeniesionym stylem */
+    color: black;
+    /* zgodnie z przeniesionym stylem */
 }
 
 /* Dodatkowe klasy z base.html */
 .bg-yellow {
-    background-color: #fff279; /* jasny żółty */
+    background-color: #fff279;
+    /* jasny żółty */
 }
 
 /* Linki */
@@ -164,71 +169,132 @@ a:hover {
     }
 }
 
-.short-content{
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.short-content {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* Dla gridu z klasą .custom-grid */
-.custom-grid .row:nth-child(odd) > [class^="col-"] {
-  background-color: #f8f9fa; /* kolor dla nieparzystych wierszy */
+.custom-grid .row:nth-child(odd)>[class^="col-"] {
+    background-color: #f8f9fa;
+    /* kolor dla nieparzystych wierszy */
 }
 
-.custom-grid .row:nth-child(even) > [class^="col-"] {
-  background-color: #e9ecef; /* kolor dla parzystych wierszy */
+.custom-grid .row:nth-child(even)>[class^="col-"] {
+    background-color: #e9ecef;
+    /* kolor dla parzystych wierszy */
 }
 
 /* Hover dla całego wiersza */
-.custom-grid .row:hover > [class^="col-"] {
-  background-color: #dee2e6;
-  cursor: pointer;
+.custom-grid .row:hover>[class^="col-"] {
+    background-color: #dee2e6;
+    cursor: pointer;
 }
 
 /* Hover dla pojedynczej kolumny */
 .custom-grid [class^="col-"]:hover {
-  background-color: #dee2e6;
+    background-color: #dee2e6;
 }
 
 /* treść zadania */
-.task-content{
-     background-color: #7bbba0;
-     color: black;
+.task-content {
+    background-color: #7bbba0;
+    color: black;
 }
 
-/*kolor przy "kliknięciu" */
+/* Ramki przycisków odpowiedzi – uniform yellow, selected green */
 .btn-outline-custom {
-  color: black;
-  border-color: #e8ff19;
-  background-color: #e8f0a7;
-  transition: background-color 0.3s ease;
-  white-space: normal;
-  overflow-wrap: break-word;
-  word-break: break-word;
-  height: auto;
-
+    color: black;
+    border-color: #e8ff19;
+    /* Żółta rama */
+    background-color: #e8f0a7;
+    /* Żółte tło dla non-selected */
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+    white-space: normal;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    height: 80px;
+    /* Stała wysokość – wszystkie ramki równe */
+    min-height: 80px;
+    /* Fallback */
+    display: flex !important;
+    /* Wymuś flex */
+    align-items: center;
+    /* Centr pionowo */
+    justify-content: flex-start;
+    /* Lewo */
+    padding: 0.75rem;
+    /* Mniej paddingu, by content nie overflow */
+    overflow: hidden;
+    /* Ukryj overflow, by nie psuł wysokości */
+    position: relative;
+    /* Dla inner yellow fix */
 }
 
- .btn-outline-custom:hover {
-  color: black;
-  background-color:yellow!important;
-  border-color: #e8ff19;
-  opacity: 1 ; /* upewnij się, że brak przezroczystości */
-} 
+.btn-outline-custom span {
+    /* Span'y w btn – rozciągaj równo */
+    flex: 1;
+    line-height: 1.2;
+    background-color: transparent !important;
+    /* Usuń inner yellow (od MathJax/padding) */
+    padding: 0;
+    /* Bez dodatkowego paddingu */
+}
 
+/* Hover – jaśniejsze yellow */
+.btn-outline-custom:hover {
+    color: black;
+    background-color: #ffff99 !important;
+    /* Jaśniejsze yellow na hover */
+    border-color: #e8ff19;
+    opacity: 1;
+}
+
+/* Selected/checked – zielony */
+.btn-check:checked+.btn-outline-custom,
 .btn-outline-custom:focus,
 .btn-outline-custom.active {
-  color: black;
-  background-color: yellow;
-  border-color: #e8ff19;
-  outline: none;
-  box-shadow: none;
+    color: white;
+    /* Biały tekst na zielonym */
+    background-color: #39723b !important;
+    /* Zielony jak header */
+    border-color: #2e5d2a;
+    /* Ciemniejszy zielony rama */
+    outline: none;
+    box-shadow: none;
 }
 
-/* Dla radio buttons z btn-check */
-.btn-check:checked + .btn-outline-custom {
-  color: black;
-  background-color: yellow;
-  border-color: #e8ff19;
+/* Inner yellow fix – dla MathJax i span'ów */
+.btn-outline-custom .math-render,
+.btn-outline-custom .plain-text {
+    background-color: transparent !important;
+    /* Usuń jasnożółty inner */
+    color: inherit;
+    /* Kolor z btn (black/white) */
+    font-size: inherit;
+    vertical-align: middle;
 }
 
+.math-render {
+    display: inline;
+    font-family: inherit;
+    /* Czcionka z btn */
+    font-size: 1em;
+}
+
+.math-render * {
+    color: inherit !important;
+    /* Liczby/nawiasy w math – kolor z btn */
+    background-color: transparent !important;
+    /* Brak inner color */
+}
+
+.plain-text {
+    font-style: normal !important;
+    white-space: pre-wrap;
+    font-family: inherit;
+    font-size: 1em;
+    background-color: transparent !important;
+    /* Brak inner yellow */
+}

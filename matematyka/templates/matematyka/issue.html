@@ -18,14 +18,16 @@
                     value="{{ answer.id }}" required>
                 <label class="btn btn-outline-custom w-100 p-3 text-start" for="answer{{ forloop.counter }}">
                     {% if answer.format == 'symbolic' %}
-                    \( {{ answer.content | safe }} \)
+                    <span class="math-render">$$ {{ answer.content | safe }} $$</span>
                     {% elif answer.format == 'numeric' %}
-                    {{ answer.content }}
+                    <span class="math-render">{{ answer.content }}</span>
+                    {% elif answer.format == 'text' %}
+                    <span class="plain-text">{{ answer.content | safe }}</span>
                     {% else %}
-                    błąd
+                    <span class="plain-text">{{ answer.content | safe }}</span>
+                    <!-- Fallback pokazuje surowy content -->
                     {% endif %}
-                </label>
-            </div>
+                </label>            </div>
             {% endfor %}
         </div>
         <div class="mt-4">

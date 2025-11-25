@@ -1,6 +1,7 @@
 DISPLAY_FORMATS = [
     ('symbolic', 'Symboliczna'),     # np. sqrt(2), 5**12
     ('numeric', 'Liczbowa'),         # np. 1.41, 244140625
+    ('text', 'Tekstowa'),           # np. "2 rozwiązania"
 ]
 
 from django.db import models
