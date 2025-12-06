@@ -14,8 +14,6 @@ from .forms import RegisterForm
 import numpy as np
 import random
 
-from django.template import Template, Context
-
 def prime_factorization(number):
     """Returns the prime factorization of a number as a list."""
     factors = []
@@ -285,7 +283,8 @@ class StartIssueView(generic.View):
                     variable_name=variable.name,
                     variable_value=str(value)
                 )
-            
+            print("VALUE MAP:")
+            print(value_map)
             solutions_map, substitutions = self.build_solutions_map(issue, additional_variables, value_map)
             answer_options = self.build_answer_options(answer_options_db, solutions_map, value_map, substitutions)
 
@@ -303,9 +302,13 @@ class StartIssueView(generic.View):
         return render(request, 'matematyka/issue.html', context=context)
 
     def build_solutions_map(self,issue,additional_variables, value_map):
+        print("BUILD SOLUTIONS MAP")
+        print(additional_variables)
+        print(len(additional_variables))
         for add_var in additional_variables:
             expr = sympify(add_var.formula)
             evaluated = expr.subs(value_map)
+            print("EVAL:")
             print(add_var.name)
             print(expr)
             print(evaluated)
@@ -343,32 +346,35 @@ class StartIssueView(generic.View):
         print(solutions_map)
         print(value_map)
         for opt in answer_options_db:
-            # solution = value_map.get(opt.content)
+            solution = value_map.get(opt.content)
             
-            if opt.display_format == 'symbolic':
-                raw_description = opt.content
-                template = Template(raw_description)
-                content = template.render(Context(value_map))
+            # if opt.display_format == 'symbolic':
+            #     raw_description = opt.content
+            #     template = Template(raw_description)
+            #     content = template.render(Context(value_map))
 
-            elif opt.display_format == 'numeric':
-                expr = sympify(opt.content,locals=solutions_map)
-                content = expr.evalf(subs=substitutions)
-                if float(content) == int(content):
-                    content= int(content)
+            # elif opt.display_format == 'numeric':
+            #     expr = sympify(opt.content,locals=solutions_map)
+            #     content = expr.evalf(subs=substitutions)
+            #     if float(content) == int(content):
+            #         content= int(content)
 
-            elif opt.display_format == 'text':
-                raw_description = opt.content
-                template = Template(raw_description)
-                content = template.render(Context(value_map))
-                print(f"text for {opt.id}: {opt.display_format} -> {content}")
+            # elif opt.display_format == 'text':
+            #     raw_description = opt.content
+            #     template = Template(raw_description)
+            #     content = template.render(Context(value_map))
+            #     print(f"text for {opt.id}: {opt.display_format} -> {content}")
             
-            else:
-                content = opt.content
-                print(f"Fallback for {opt.id}: {opt.display_format} -> {content}")
-
+            # else:
+            #     content = opt.content
+            #     print(f"Fallback for {opt.id}: {opt.display_format} -> {content}")
+            raw_description = opt.content
+            template = Template(raw_description)
+            rendered_description = template.render(Context(value_map))
+            print(f"RENDER: option for {opt.id}: {opt.display_format} -> {rendered_description}")
             answer_options.append({
                 'id': opt.id,
-                'content': content,
+                'content': rendered_description,
                 'is_correct': opt.is_correct,
                 'format': opt.display_format
             })
