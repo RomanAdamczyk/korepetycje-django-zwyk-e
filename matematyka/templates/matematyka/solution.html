@@ -1,5 +1,7 @@
 {% if solution %}
+<span class="math-render">
 <div class="alert alert-info">{{ solution|safe }}</div>
+</span>
 {% elif error %}
 <div class="alert alert-warning">{{ error }}</div>
 {% endif %}
