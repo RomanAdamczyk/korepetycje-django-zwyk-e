@@ -233,11 +233,18 @@ class StartIssueView(generic.View):
                     issue = existing_issue
                     variables = list(UsedVariable.objects.filter(issue=issue))
                     value_map = {var.variable_name: var.variable_value for var in variables}
+                    names = list(value_map.keys())
+                    model_vars = Variable.objects.filter(name__in=names, task=task)
+                    model_additional = AdditionalVariable.objects.filter(name__in=names, task=task)
+                    print(f"Model vars: {len(model_vars)}, Additional: {len(model_additional)}")
+                    variables_list = list(model_vars) + list(model_additional)
+                    value_map = self.split_values_to_map(value_map, variables_list, always_positive_zero=False)
+                    numerical_value_map = {k: v for k, v in value_map.items() if not k.endswith('_sign') and not k.endswith('_abs')}
                     answer_options_db = AnswerOption.objects.filter(task=task)
-                    symbols = {name: Symbol(name) for name in value_map}
+                    symbols = {name: Symbol(name) for name in numerical_value_map}
                     substitutions = {
                         symbols[k]: int(float(v)) if float(v).is_integer() else float(v)
-                        for k, v in value_map.items()
+                        for k, v in numerical_value_map.items()
                     }
 
                     answer_options = self.build_answer_options(answer_options_db, symbols, value_map, substitutions)
@@ -285,6 +292,7 @@ class StartIssueView(generic.View):
                 )
             print("VALUE MAP:")
             print(value_map)
+            value_map = self.split_values_to_map(value_map, variables, always_positive_zero=False)
             solutions_map, substitutions = self.build_solutions_map(issue, additional_variables, value_map)
             answer_options = self.build_answer_options(answer_options_db, solutions_map, value_map, substitutions)
 
@@ -307,7 +315,8 @@ class StartIssueView(generic.View):
         print(len(additional_variables))
         for add_var in additional_variables:
             expr = sympify(add_var.formula)
-            evaluated = expr.subs(value_map)
+            numerical_value_map = {k: v for k, v in value_map.items() if not k.endswith('_sign') and not k.endswith('_abs')}
+            evaluated = expr.subs(numerical_value_map)
             print("EVAL:")
             print(add_var.name)
             print(expr)
@@ -332,11 +341,12 @@ class StartIssueView(generic.View):
                 variable_value=str(numeric_result)
             )
 
-        symbols = {name: Symbol(name) for name in value_map}
+        value_map = self.split_values_to_map(value_map, additional_variables, always_positive_zero=False)
+        symbols = {name: Symbol(name) for name in numerical_value_map}
         
         substitutions = {
             symbols[k]: int(float(v)) if float(v).is_integer() else float(v)
-            for k, v in value_map.items()
+            for k, v in numerical_value_map.items()
         }
         return symbols, substitutions
 
@@ -388,9 +398,11 @@ class StartIssueView(generic.View):
             if variable.choices:
                 choices = variable.choices
             else:
+                without_values = getattr(variable, 'without_value', [])
                 choices = []
                 for var in np.arange(variable.min_value, variable.max_value + variable.step, variable.step):
-                    choices.append(str(round(var, 4)))
+                    if var not in without_values:
+                        choices.append(str(round(var, 4)))
             
             choices_dict[variable.id] = choices
 
@@ -421,6 +433,37 @@ class StartIssueView(generic.View):
             else:
                 raise Exception(f"Nie można wygenerować unikalnych wartości dla grupy zmiennych: {group_name}")
         return variables
+    
+    def split_values_to_map(self, value_map, variables_list, always_positive_zero=False):
+        for var in variables_list:
+            if var.split_sign:
+                value_str = value_map.get(var.name, '0')
+                value = float(value_str)
+
+                if value.is_integer():
+                    value_map[var.name] = str(int(value))
+                else:
+                    value_map[var.name] = str(value)
+                if value < 0:
+                    znak = '-'
+                elif value > 0:
+                    znak = '+'
+                elif always_positive_zero:
+                    znak = '+'
+                else:
+                    znak = ''
+
+                abs_value = abs(value)
+                
+                if abs_value.is_integer():
+                    abs_value_str = str(int(abs_value))
+                else:
+                    abs_value_str = str(abs_value)
+
+                value_map[f"{var.name}_sign"] = znak
+                value_map[f"{var.name}_abs"] = abs_value_str
+        
+        return value_map
 
 class GetHintView(generic.View):
     def get(self, request, task_id):

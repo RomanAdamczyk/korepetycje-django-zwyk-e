@@ -62,7 +62,7 @@ class AssignedTaskAdmin(admin.ModelAdmin):
     list_filter = ['assigned_date', 'deadline']
 
 class VariableAdmin(admin.ModelAdmin):
-    list_display = ['id', 'task_id', 'name', 'min_value', 'max_value','step','choices', 'original_value', 'unique_group']
+    list_display = ['id', 'task_id', 'name', 'min_value', 'max_value','step','choices', 'original_value', 'unique_group', 'split_sign', 'without_value']
 
     def task_id(self, obj):
         return obj.task.id
@@ -72,7 +72,7 @@ class VariableAdmin(admin.ModelAdmin):
     list_filter = ['task_id']
 
 class AdditionalVariableAdmin(admin.ModelAdmin):
-    list_display = ['id', 'task__id', 'name', 'formula']
+    list_display = ['id', 'task__id', 'name', 'formula','split_sign']
 
 class UsedVariableAdmin(admin.ModelAdmin):
     list_display = ['id', 'variable', 'issue', 'variable_name', 'variable_value']

@@ -166,7 +166,9 @@ class Variable(models.Model):
         min_value (float): Minimum value for the variable.
         max_value (float): Maximum value for the variable.
         step (float): Step value for the variable.
-        unique_group (str): Grouping identifier for unique variable sets.'''
+        unique_group (str): Grouping identifier for unique variable sets.
+        split_sign (bool): Indicates if the variable should be split by sign.
+        without_value (list): List of values that should be excluded for this variable.'''
 
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='variables', null=True, blank=True)
     name = models.CharField(max_length=100)
@@ -176,6 +178,8 @@ class Variable(models.Model):
     max_value = models.FloatField(null=True, blank=True)
     step = models.FloatField(null=True, blank=True)
     unique_group = models.CharField(max_length=100, null=True, blank=True)
+    split_sign = models.BooleanField(default=False)
+    without_value = models.JSONField(default=list, blank=True) 
 
     class Meta:
         unique_together = ('task', 'name')
@@ -191,11 +195,12 @@ class AdditionalVariable(models.Model):
         name (str): The name of the additional variable.
         formula (str): The formula used to compute the additional variable.
         save_result (bool): Indicates if the result of the formula should be saved to UsedVariable (solutions not).
-        '''
+        split_sign (bool): Indicates if the variable should be split by sign.'''
     
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='additional_variables')
     name = models.CharField(max_length=100)  # np. 'potega', 'roznica'
     formula = models.CharField(max_length=200, null=True, blank=True)  # np. 'liczba1 ** liczba2'
+    split_sign = models.BooleanField(default=False)
     # save_result = models.BooleanField(default=False)  
 
     def __str__(self):
