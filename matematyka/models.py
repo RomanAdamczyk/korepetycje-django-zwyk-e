@@ -6,6 +6,7 @@ DISPLAY_FORMATS = [
 
 from django.db import models
 from django.contrib.auth.models import User
+from itertools import chain
 
 class Category(models.Model):
     '''
@@ -135,25 +136,7 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return f"User {self.user.id} - Nick {self.user.username} - Name: {self.username_for_admin}"
-    
-class AssignedTask(models.Model):
-    '''
-    Model representing a task assigned to a user.
-    
-    Attributes:
-        user (User): The user to whom the task is assigned.
-        task (Task): The task that is assigned.
-        assigned_date (datetime): The date when the task was assigned.
-        deadline (datetime): The deadline for the task.'''
-
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='assigned_tasks')
-    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='assigned_tasks')
-    assigned_date = models.DateTimeField(auto_now_add=True)
-    deadline = models.DateTimeField(null=True, blank=True)
-
-    def __str__(self):
-        return f"Task {self.task_id} assigned to User {self.user_id}"
-    
+     
 class Variable(models.Model):
     '''
     Model representing a variable used in tasks.
@@ -261,7 +244,44 @@ class UserAnswer(models.Model):
 
     def __str__(self):
         return f"Odpowiedź #{self.id} od {self.user.username if self.user else 'Anonim'}"
+
+class AssignedTask(models.Model):
+    '''
+    Model representing a task assigned to a user.
     
+    Attributes:
+        user (User): The user to whom the task is assigned.
+        task (Task): The task that is assigned.
+        assigned_date (datetime): The date when the task was assigned.
+        deadline (datetime): The deadline for the task.'''
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='assigned_tasks')
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='assigned_tasks')
+    assigned_date = models.DateTimeField(auto_now_add=True)
+    deadline = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"Task {self.task_id} assigned to User {self.user_id}"
+    
+    @property
+    def completion_date(self):
+        issues = self.task.issues.all()
+        ua_qs = list(chain.from_iterable(issue.user_answers.all() for issue in issues))
+        has_completion = any(
+            ua.answer_date >= self.assigned_date and 
+            any(opt.is_correct for opt in ua.answer_options.all())
+            for ua in ua_qs
+    )
+        # user_answers = UserAnswer.objects.filter(
+        #     issue__task=self.task,
+        #     user=self.user,
+        #     answer_date__gte=self.assigned_date,
+        #     answer_options__is_correct=True
+        # ).select_related('issue__task', 'user').prefetch_related('answer_options').distinct()
+     
+        return has_completion
+
+
 class Solution(models.Model):
     '''
     Model representing a solution to a task.

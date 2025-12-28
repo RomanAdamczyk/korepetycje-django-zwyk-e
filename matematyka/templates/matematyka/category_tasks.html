@@ -14,30 +14,20 @@ Zadania z egzaminu {{ exam.level }} {{ exam.date }} ({{ exam.source }})
 
 <div class="container custom-grid text-black">
     <div class="row">
-        <div class="col-lg-2">Egzamin</div>
-        <div class="col-lg-1">Data</div>
-        <div class="col-lg-1">Źródło</div>
+        <div class="col-lg-4">Egzamin</div>
         <div class="col-lg-1">Nr zadania</div>
         <div class="col-lg-1">Punkty</div>
-        <div class="col-lg-2">Poziom</div>
         <div class="col-lg-2">Zmienne oryginalne</div>
         <div class="col-lg-2">Zmienne losowe</div>
+        {% if user.is_authenticated %}
+        <div class="col-lg-2">Zadane</div>
+        {% endif %}
     </div>
     {% for task in tasks %}
     <div class="row">
-        <div class="col-lg-2">
+        <div class="col-lg-4">
             <div class="list-group-item list-group-item-action short-content text-black">
-                {{ task.task.task_level.exam_level }}
-            </div>
-        </div>
-        <div class="col-lg-1">
-            <div class="list-group-item list-group-item-action short-content text-black">
-                {{ task.task.exam_date }}
-            </div>
-        </div>
-        <div class="col-lg-1">
-            <div class="list-group-item list-group-item-action short-content text-black">
-                {{ task.task.source }}
+                {{ task.task.source }} - {{ task.task.task_level.exam_level }}, {{ task.task.exam_date }}
             </div>
         </div>
         <div class="col-lg-1">
@@ -48,11 +38,6 @@ Zadania z egzaminu {{ exam.level }} {{ exam.date }} ({{ exam.source }})
         <div class="col-lg-1">
             <div class="list-group-item list-group-item-action short-content text-black">
                 {{ task.task.points }} pkt
-            </div>
-        </div>
-        <div class="col-lg-2">
-            <div class="list-group-item list-group-item-action short-content text-black">
-                {{ task.task.task_level.school_level }} kl.{{ task.task_level.class_number }}
             </div>
         </div>
         <div class="col-lg-2">
@@ -71,7 +56,7 @@ Zadania z egzaminu {{ exam.level }} {{ exam.date }} ({{ exam.source }})
         <div class="col-lg-2">
             <div class="list-group-item list-group-item-action short-content text-black">
 
-                <a href="{% url 'start_issue' task.task.id %}?random=true" , class="btn btn-warning">
+                <a href="{% url 'start_issue' task.task.id %}?random=true" class="btn btn-warning">
                     {% if user.is_authenticated %}
                     {{ task.total_attempts_random }} / {{ task.correct_attempts_random }}
                     {% else %}
@@ -81,9 +66,24 @@ Zadania z egzaminu {{ exam.level }} {{ exam.date }} ({{ exam.source }})
                 <div id="wynik"></div>
             </div>
         </div>
-
+        {% if user.is_authenticated %}
+        <div class="col-lg-2">
+            <div class="list-group-item list-group-item-action short-content text-black">
+                {% if task.is_assigned %}
+                {% if task.is_completed %}
+                <span class="badge bg-success">Zakończone</span>
+                {% elif task.overdue %}
+                <span class="badge bg-danger">Po terminie</span>
+                {% else %}
+                <span class="badge bg-warning text-dark">W trakcie (do {{ task.deadline|date:"Y-m-d H:i" }})</span>
+                {% endif %}
+                {% else %}
+                <span class="badge bg-secondary">Nie zadane</span>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
     </div>
     {% endfor %}
 </div>
-
 {% endblock %}

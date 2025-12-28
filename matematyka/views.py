@@ -6,9 +6,9 @@ from django.contrib.auth.models import Group
 from django.utils import timezone
 from sympy import sympify, N, Symbol
 from collections import defaultdict
-from django.db.models import Count
+from django.db.models import Count, OuterRef, Prefetch
 
-from .models import Category, Issue, Task, UsedVariable, AnswerOption, AdditionalVariable, Variable, UserAnswer, Solution, TaskLevel
+from .models import Category, Issue, Task, UsedVariable, AnswerOption, AdditionalVariable, Variable, UserAnswer, Solution, AssignedTask
 from .forms import RegisterForm
 
 import numpy as np
@@ -138,8 +138,20 @@ class CategoryTasksView(generic.DetailView):
         user_answers = UserAnswer.objects.filter(
             issue__in=issues,
             user=user
-        ).select_related('issue', 'issue__task').prefetch_related('answer_options')
+        ).select_related('issue', 'issue__task').prefetch_related('answer_options').distinct()
+
+        assigned_tasks = AssignedTask.objects.filter(
+            user=user, task__in=category_tasks
+            ).prefetch_related(Prefetch(
+                'task__issues__user_answers',
+                 queryset=UserAnswer.objects.filter(
+                     user = user,
+                    #  answer_date__gte=OuterRef('assigned_date'),
+                    #  answer_options__is_correct=True
+                     ).select_related('issue__task', 'user').prefetch_related('answer_options')))
         
+        assigned_by_task = {at.task_id: at for at in assigned_tasks}
+
         total_attempts_original = defaultdict(int)
         correct_attempts_original = defaultdict(int)
         total_attempts_random = defaultdict(int)
@@ -165,7 +177,20 @@ class CategoryTasksView(generic.DetailView):
                 'total_attempts_random': total_attempts_random[task.id],
                 'correct_attempts_random': correct_attempts_random[task.id],
             })
-            
+            assigned = assigned_by_task.get(task.id)
+            if assigned:
+                tasks[-1]['is_assigned'] = True
+                is_completed = assigned.completion_date
+                tasks[-1]['is_completed'] = is_completed
+                tasks[-1]['deadline'] = assigned.deadline if not is_completed else None
+                overdue = assigned.deadline < timezone.now() if assigned.deadline else False
+                tasks[-1]['overdue'] = overdue
+            else:
+                tasks[-1]['is_assigned'] = False
+                tasks[-1]['is_completed'] = False
+                tasks[-1]['deadline'] = None
+                tasks[-1]['overdue'] = False
+                        
         context['tasks'] = tasks
         return context
     
@@ -718,15 +743,27 @@ class ExamTasksView(generic.ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        tasks = context['tasks']
+        exam_tasks = context['tasks']
 
-        issues = Issue.objects.filter(task__in=tasks)
+        issues = Issue.objects.filter(task__in=exam_tasks)
 
         user = self.request.user if self.request.user.is_authenticated else None
         user_answers = UserAnswer.objects.filter(
             issue__in=issues,
             user=user
         ).select_related('issue', 'issue__task').prefetch_related('answer_options')
+
+        assigned_tasks = AssignedTask.objects.filter(
+            user=user, task__in=exam_tasks
+            ).prefetch_related(Prefetch(
+                'task__issues__user_answers',
+                 queryset=UserAnswer.objects.filter(
+                     user = user,
+                    #  answer_date__gte=OuterRef('assigned_date'),
+                    #  answer_options__is_correct=True
+                     ).select_related('issue__task', 'user').prefetch_related('answer_options')))
+        
+        assigned_by_task = {at.task_id: at for at in assigned_tasks}
 
         total_attempts_original = defaultdict(int)
         correct_attempts_original = defaultdict(int)
@@ -745,17 +782,30 @@ class ExamTasksView(generic.ListView):
                     if answer_option.is_correct:
                         correct_attempts_original[ua.issue.task_id] += 1
 
-        tasks_with_attempts = []
-        for task in tasks:
-            tasks_with_attempts.append({
+        tasks = []
+        for task in exam_tasks:
+            tasks.append({
                 'task': task,
                 'total_attempts_original': total_attempts_original[task.id],
                 'correct_attempts_original': correct_attempts_original[task.id],
                 'total_attempts_random': total_attempts_random[task.id],
                 'correct_attempts_random': correct_attempts_random[task.id],
             })
-
-        context['tasks'] = tasks_with_attempts
+            assigned = assigned_by_task.get(task.id)
+            if assigned:
+                tasks[-1]['is_assigned'] = True
+                is_completed = assigned.completion_date
+                tasks[-1]['is_completed'] = is_completed
+                tasks[-1]['deadline'] = assigned.deadline if not is_completed else None
+                overdue = assigned.deadline < timezone.now() if assigned.deadline else False
+                tasks[-1]['overdue'] = overdue
+            else:
+                tasks[-1]['is_assigned'] = False
+                tasks[-1]['is_completed'] = False
+                tasks[-1]['deadline'] = None
+                tasks[-1]['overdue'] = False
+    
+        context['tasks'] = tasks
         context['exam_level'] = self.kwargs.get('exam_level')
         context['exam_date'] = self.kwargs.get('exam_date')
         context['source'] = self.kwargs.get('source')
