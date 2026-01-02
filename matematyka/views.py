@@ -6,7 +6,7 @@ from django.contrib.auth.models import Group
 from django.utils import timezone
 from sympy import sympify, N, Symbol
 from collections import defaultdict
-from django.db.models import Count, OuterRef, Prefetch
+from django.db.models import Count, OuterRef, Prefetch, When, Case, Value
 
 from .models import Category, Issue, Task, UsedVariable, AnswerOption, AdditionalVariable, Variable, UserAnswer, Solution, AssignedTask
 from .forms import RegisterForm
@@ -644,9 +644,12 @@ class AnswerResultView(generic.View):
                 if next_task:
                     next_task_id = next_task.id
           
-
             # elif origin_type == 'random':
-            #     ...
+            #
+        assigned_task = AssignedTask.objects.filter(user=user, task=task, is_completed=False).first()
+        if is_correct and assigned_task:
+            assigned_task.is_completed = True
+            assigned_task.save()
 
         return render(request, 'matematyka/answer.html', {
             'issue': issue,
@@ -810,3 +813,20 @@ class ExamTasksView(generic.ListView):
         context['exam_date'] = self.kwargs.get('exam_date')
         context['source'] = self.kwargs.get('source')
         return context
+
+class AssignedTasksView(generic.ListView):
+    model = AssignedTask
+    template_name = 'matematyka/assigned_tasks.html'
+    context_object_name = 'assigned_tasks'
+
+    def get(self, request, *args, **kwargs):
+        request.session['origin'] = {
+            'type': 'assigned',
+        }
+        return super().get(request, *args, **kwargs)
+
+    def get_queryset(self):
+        user = self.request.user if self.request.user.is_authenticated else None
+        queryset = AssignedTask.objects.filter(user=user).select_related('task').annotate(
+            is_completed_flag=(Case(When(completion_date = True,then=Value(1)),default=Value(0)))).order_by('is_completed_flag','deadline')
+        return queryset

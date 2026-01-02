@@ -57,9 +57,9 @@ class UserProfileAdmin(admin.ModelAdmin):
     search_fields = ['user__username', 'username_for_admin']
 
 class AssignedTaskAdmin(admin.ModelAdmin):
-    list_display = ['id', 'user', 'task', 'assigned_date', 'deadline']
+    list_display = ['id', 'user', 'task', 'assigned_date', 'deadline','is_completed']
     search_fields = ['user__username', 'task__content']
-    list_filter = ['assigned_date', 'deadline']
+    list_filter = ['assigned_date', 'deadline','is_completed']
 
 class VariableAdmin(admin.ModelAdmin):
     list_display = ['id', 'task_id', 'name', 'min_value', 'max_value','step','choices', 'original_value', 'unique_group', 'split_sign', 'without_value']

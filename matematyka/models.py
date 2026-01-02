@@ -259,6 +259,7 @@ class AssignedTask(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='assigned_tasks')
     assigned_date = models.DateTimeField(auto_now_add=True)
     deadline = models.DateTimeField(null=True, blank=True)
+    is_completed = models.BooleanField(default=False)
 
     def __str__(self):
         return f"Task {self.task_id} assigned to User {self.user_id}"
