@@ -130,7 +130,7 @@ class CategoryTasksView(generic.DetailView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        category_tasks = self.object.tasks.all()
+        category_tasks = self.object.tasks.prefetch_related('category').all()
         
         issues = Issue.objects.filter(task__category=self.object)
         
@@ -172,6 +172,7 @@ class CategoryTasksView(generic.DetailView):
         for task in category_tasks:
             tasks.append({
                 'task': task,
+                'category': self.object,
                 'total_attempts_original': total_attempts_original[task.id],
                 'correct_attempts_original': correct_attempts_original[task.id],
                 'total_attempts_random': total_attempts_random[task.id],
@@ -741,7 +742,7 @@ class ExamTasksView(generic.ListView):
             task_level__exam_level=exam_level,
             exam_date=exam_date,
             source__name=source
-        ).select_related('task_level')
+        ).prefetch_related('category').select_related('task_level')
         return queryset
 
     def get_context_data(self, **kwargs):
@@ -793,6 +794,7 @@ class ExamTasksView(generic.ListView):
                 'correct_attempts_original': correct_attempts_original[task.id],
                 'total_attempts_random': total_attempts_random[task.id],
                 'correct_attempts_random': correct_attempts_random[task.id],
+                'category': task.category.all()
             })
             assigned = assigned_by_task.get(task.id)
             if assigned:
@@ -816,7 +818,7 @@ class ExamTasksView(generic.ListView):
 
 class AssignedTasksView(generic.ListView):
     model = AssignedTask
-    template_name = 'matematyka/assigned_tasks.html'
+    template_name = 'matematyka/category_tasks.html'
     context_object_name = 'assigned_tasks'
 
     def get(self, request, *args, **kwargs):
@@ -828,5 +830,52 @@ class AssignedTasksView(generic.ListView):
     def get_queryset(self):
         user = self.request.user if self.request.user.is_authenticated else None
         queryset = AssignedTask.objects.filter(user=user).select_related('task').annotate(
-            is_completed_flag=(Case(When(completion_date = True,then=Value(1)),default=Value(0)))).order_by('is_completed_flag','deadline')
+            is_completed_flag=(Case(When(is_completed= True,then=Value(1)),default=Value(0)))).order_by('is_completed_flag','deadline').prefetch_related('task__category')
         return queryset
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user if self.request.user.is_authenticated else None
+        tasks_list = [at.task for at in self.object_list]
+        issues = Issue.objects.filter(task__in=tasks_list)
+        user_answers = UserAnswer.objects.filter(
+            issue__in=issues,
+            user=user
+        ).select_related('issue', 'issue__task').prefetch_related('answer_options').distinct()
+
+        total_attempts_original = defaultdict(int)
+        correct_attempts_original = defaultdict(int)
+        total_attempts_random = defaultdict(int)
+        correct_attempts_random = defaultdict(int)        
+        for ua in user_answers:
+            answer_option = ua.answer_options.first()
+            if answer_option:
+                if ua.issue.variable_is_random:
+                    total_attempts_random[ua.issue.task_id] += 1
+                    if answer_option.is_correct:
+                        correct_attempts_random[ua.issue.task_id] += 1
+                else:
+                    total_attempts_original[ua.issue.task_id] += 1
+                    if answer_option.is_correct:
+                        correct_attempts_original[ua.issue.task_id] += 1
+
+        tasks = []
+        for assigned in self.object_list:
+            task = assigned.task
+            tasks.append({
+                'task': task,
+                'category': task.category.all(),
+                'total_attempts_original': total_attempts_original[task.id],
+                'correct_attempts_original': correct_attempts_original[task.id],
+                'total_attempts_random': total_attempts_random[task.id],
+                'correct_attempts_random': correct_attempts_random[task.id],
+                'is_assigned' : True,
+                'is_completed' : assigned.completion_date,
+                'deadline' : assigned.deadline if not assigned.completion_date else None,
+                'overdue' : assigned.deadline < timezone.now() if assigned.deadline else False,
+            })
+            print (f'Assigned task: {task.id}, completed: {assigned.completion_date}, deadline: {assigned.deadline}, overdue: {tasks[-1]["overdue"]}')
+ 
+        context['tasks'] = tasks
+
+        return context

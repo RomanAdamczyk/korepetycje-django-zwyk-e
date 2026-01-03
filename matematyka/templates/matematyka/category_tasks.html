@@ -14,18 +14,28 @@ Zadania z egzaminu {{ exam.level }} {{ exam.date }} ({{ exam.source }})
 
 <div class="container custom-grid text-black">
     <div class="row">
-        <div class="col-lg-4">Egzamin</div>
+        <div class="col-lg-3">Kategoria</div>
+        <div class="col-lg-3">Egzamin</div>
         <div class="col-lg-1">Nr zadania</div>
         <div class="col-lg-1">Punkty</div>
-        <div class="col-lg-2">Zmienne oryginalne</div>
-        <div class="col-lg-2">Zmienne losowe</div>
+        <div class="col-lg-1">Zmienne oryginalne</div>
+        <div class="col-lg-1">Zmienne losowe</div>
         {% if user.is_authenticated %}
         <div class="col-lg-2">Zadane</div>
         {% endif %}
     </div>
     {% for task in tasks %}
     <div class="row">
-        <div class="col-lg-4">
+        <div class="col-lg-3">
+            <div class="list-group-item list-group-item-action short-content text-black">
+                {% for cat in task.task.category.all %}
+
+                {{ cat.name }},
+
+                {% endfor %}
+            </div>
+        </div>
+        <div class="col-lg-3">
             <div class="list-group-item list-group-item-action short-content text-black">
                 {{ task.task.source }} - {{ task.task.task_level.exam_level }}, {{ task.task.exam_date }}
             </div>
@@ -40,7 +50,7 @@ Zadania z egzaminu {{ exam.level }} {{ exam.date }} ({{ exam.source }})
                 {{ task.task.points }} pkt
             </div>
         </div>
-        <div class="col-lg-2">
+        <div class="col-lg-1">
             <div class="list-group-item list-group-item-action short-content text-black">
 
                 <a href="{% url 'start_issue' task.task.id %}" class="btn btn-warning">
@@ -53,7 +63,7 @@ Zadania z egzaminu {{ exam.level }} {{ exam.date }} ({{ exam.source }})
                 <div id="wynik"></div>
             </div>
         </div>
-        <div class="col-lg-2">
+        <div class="col-lg-1">
             <div class="list-group-item list-group-item-action short-content text-black">
 
                 <a href="{% url 'start_issue' task.task.id %}?random=true" class="btn btn-warning">

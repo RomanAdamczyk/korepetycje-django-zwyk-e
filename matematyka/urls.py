@@ -16,5 +16,6 @@ urlpatterns = [
     path('tasks/<int:task_id>/answer/submit/', views.SubmitAnswerView.as_view(), name='answer'),
     path('tasks/<int:task_id>/answer/result/', views.AnswerResultView.as_view(), name='answer_result'),
     path('tasks/<int:task_id>/answer/result/solution', views.GetSolutionView.as_view(), name='get_solution'),
+    path('tasks/assigned/', views.AssignedTasksView.as_view(), name='assigned_tasks'),
 ]
     
