@@ -9,8 +9,9 @@ class LoginForm(forms.Form):
 
 class RegisterForm(UserCreationForm):
     usable_password = None
+    code = forms.CharField(label='Kod zaproszeniowy', required=True, widget=forms.PasswordInput)
     
     class Meta:
         model=User
-        fields = ['username','email','password1','password2'] 
+        fields = ['username','email','password1','password2','code'] 
 

@@ -3,10 +3,12 @@ from django.views import generic
 from django.template import Template, Context
 from django.contrib.auth import login
 from django.contrib.auth.models import Group
+from django.contrib import messages
 from django.utils import timezone
 from sympy import sympify, N, Symbol
 from collections import defaultdict
 from django.db.models import Count, OuterRef, Prefetch, When, Case, Value
+from django.conf import settings
 
 from .models import Category, Issue, Task, UsedVariable, AnswerOption, AdditionalVariable, Variable, UserAnswer, Solution, AssignedTask
 from .forms import RegisterForm
@@ -52,11 +54,18 @@ class RegisterView(generic.CreateView):
     template_name = 'matematyka/register.html'
     
     def form_valid(self, form):
+        if form.cleaned_data.get('code') != settings.INVITE_CODE:
+            form.add_error('code', 'Nieprawidłowy kod zaproszeniowy.')
+            return self.form_invalid(form)
+        
         user = form.save()
+        messages.success(self.request, 'Rejestracja udana! Czekaj na aktywację konta przez administratora')
+        user.is_active = False
+        user.save(update_fields=['is_active'])
         default_group, created = Group.objects.get_or_create(name='Uzytkownicy')
         user.groups.add(default_group)
-        if user:
-            login(self.request, user)
+        # if user:
+        #     login(self.request, user)
 
         return redirect('category_list')
 

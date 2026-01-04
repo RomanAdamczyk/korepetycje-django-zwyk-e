@@ -298,3 +298,22 @@ a:hover {
     background-color: transparent !important;
     /* Brak inner yellow */
 }
+
+.messages {
+    list-style: none;
+    margin: 10px 0;
+    padding: 0;
+}
+.messages li {
+    margin-bottom: 5px;
+    padding: 10px;
+    border-radius: 5px;
+}
+.messages .success { background-color: #d4edda; color: #155724; }
+.messages .error { background-color: #f8d7da; color: #721c24; }
+
+.alert {
+    margin-bottom: 10px;
+}
+.alert-success { border-color: #28a745; }
+.alert-danger { border-color: #dc3545; }
