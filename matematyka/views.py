@@ -193,6 +193,7 @@ class CategoryTasksView(generic.DetailView):
                 tasks[-1]['overdue'] = False
                         
         context['tasks'] = tasks
+        context['view_type'] = 'category'
         return context
     
 class StartIssueView(generic.View):
@@ -814,6 +815,7 @@ class ExamTasksView(generic.ListView):
         context['exam_level'] = self.kwargs.get('exam_level')
         context['exam_date'] = self.kwargs.get('exam_date')
         context['source'] = self.kwargs.get('source')
+        context['view_type'] = 'exam'
         return context
 
 class AssignedTasksView(generic.ListView):
@@ -877,5 +879,6 @@ class AssignedTasksView(generic.ListView):
             print (f'Assigned task: {task.id}, completed: {assigned.completion_date}, deadline: {assigned.deadline}, overdue: {tasks[-1]["overdue"]}')
  
         context['tasks'] = tasks
+        context['view_type'] = 'assigned'
 
         return context

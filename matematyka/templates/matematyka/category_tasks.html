@@ -5,10 +5,12 @@
 
 {% block content %}
 {% block title %}
-{% if category %}
+{% if view_type == 'category' %}
 Zadania z kategorii {{ category.name }}
-{% elif exam %}
-Zadania z egzaminu {{ exam.level }} {{ exam.date }} ({{ exam.source }})
+{% elif view_type == 'exam' %}
+Zadania z egzaminu {{ exam_level }}, {{ exam_date }} ({{  source }} )
+{% elif view_type == 'assigned' %}
+Zadania przypisane użytkownikowi {{ user.username }}
 {% endif %}
 {% endblock %}
 
