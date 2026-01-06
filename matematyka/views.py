@@ -841,11 +841,14 @@ class AssignedTasksView(generic.ListView):
     def get_queryset(self):
         user = self.request.user if self.request.user.is_authenticated else None
         queryset = AssignedTask.objects.filter(user=user).select_related('task').annotate(
-            is_completed_flag=(Case(When(is_completed= True,then=Value(1)),default=Value(0)))).order_by('is_completed_flag','deadline').prefetch_related('task__category')
+            is_completed_flag=(Case(When(is_completed= True,then=Value(1)),default=Value(0)))).order_by(
+                'is_completed_flag','deadline').prefetch_related('task__category')
         return queryset
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['hide_completed'] = self.request.GET.get('hide_completed')
+        hide_completed = self.request.GET.get('hide_completed')
         user = self.request.user if self.request.user.is_authenticated else None
         tasks_list = [at.task for at in self.object_list]
         issues = Issue.objects.filter(task__in=tasks_list)
@@ -872,20 +875,24 @@ class AssignedTasksView(generic.ListView):
 
         tasks = []
         for assigned in self.object_list:
-            task = assigned.task
-            tasks.append({
-                'task': task,
-                'category': task.category.all(),
-                'total_attempts_original': total_attempts_original[task.id],
-                'correct_attempts_original': correct_attempts_original[task.id],
-                'total_attempts_random': total_attempts_random[task.id],
-                'correct_attempts_random': correct_attempts_random[task.id],
-                'is_assigned' : True,
-                'is_completed' : assigned.completion_date,
-                'deadline' : assigned.deadline if not assigned.completion_date else None,
-                'overdue' : assigned.deadline < timezone.now() if assigned.deadline else False,
-            })
-            print (f'Assigned task: {task.id}, completed: {assigned.completion_date}, deadline: {assigned.deadline}, overdue: {tasks[-1]["overdue"]}')
+            is_completed = assigned.completion_date
+            if not hide_completed or not is_completed or (is_completed and assigned.deadline >= timezone.now()):
+                task = assigned.task
+                overdue = assigned.deadline < timezone.now() if assigned.deadline else False
+
+                tasks.append({
+                    'task': task,
+                    'category': task.category.all(),
+                    'total_attempts_original': total_attempts_original[task.id],
+                    'correct_attempts_original': correct_attempts_original[task.id],
+                    'total_attempts_random': total_attempts_random[task.id],
+                    'correct_attempts_random': correct_attempts_random[task.id],
+                    'is_assigned' : True,
+                    'is_completed' : assigned.completion_date,
+                    'deadline' : assigned.deadline if not assigned.completion_date else None,
+                    'overdue' : overdue,
+                    # 'status_group': 'pilne' if not is_completed and overdue else 'do_zrobienia' if not is_completed else 'zrobione_przed' if assigned.deadline > timezone.now() else 'zrobione_po'
+                })
  
         context['tasks'] = tasks
         context['view_type'] = 'assigned'

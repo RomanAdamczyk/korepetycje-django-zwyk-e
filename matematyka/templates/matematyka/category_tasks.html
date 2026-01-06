@@ -8,11 +8,21 @@
 {% if view_type == 'category' %}
 Zadania z kategorii {{ category.name }}
 {% elif view_type == 'exam' %}
-Zadania z egzaminu {{ exam_level }}, {{ exam_date }} ({{  source }} )
+Zadania z egzaminu {{ exam_level }}, {{ exam_date }} ({{ source }} )
 {% elif view_type == 'assigned' %}
 Zadania przypisane użytkownikowi {{ user.username }}
+<div class="filter-bar mb-3 d-flex justify-content-between align-items-center">
+    {% if not hide_completed %}
+    <a href="{% url 'assigned_tasks' %}?hide_completed=1" class="btn btn-secondary">Ukryj ukończone</a>
+    {% else %}
+    <a href="{% url 'assigned_tasks' %}" class="btn btn-secondary">Pokaż wszystkie</a>
+    {% endif %}.
+
+</div>
+
 {% endif %}
 {% endblock %}
+
 
 <div class="container custom-grid text-black">
     <div class="row">
