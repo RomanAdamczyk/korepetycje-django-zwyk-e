@@ -272,7 +272,6 @@ class StartIssueView(generic.View):
                     names = list(value_map.keys())
                     model_vars = Variable.objects.filter(name__in=names, task=task)
                     model_additional = AdditionalVariable.objects.filter(name__in=names, task=task)
-                    print(f"Model vars: {len(model_vars)}, Additional: {len(model_additional)}")
                     variables_list = list(model_vars) + list(model_additional)
                     value_map = self.split_values_to_map(value_map, variables_list, always_positive_zero=False)
                     numerical_value_map = {k: v for k, v in value_map.items() if not k.endswith('_sign') and not k.endswith('_abs')}
@@ -326,8 +325,7 @@ class StartIssueView(generic.View):
                     variable_name=variable.name,
                     variable_value=str(value)
                 )
-            print("VALUE MAP:")
-            print(value_map)
+
             value_map = self.split_values_to_map(value_map, variables, always_positive_zero=False)
             solutions_map, substitutions = self.build_solutions_map(issue, additional_variables, value_map)
             answer_options = self.build_answer_options(answer_options_db, solutions_map, value_map, substitutions)
@@ -346,17 +344,11 @@ class StartIssueView(generic.View):
         return render(request, 'matematyka/issue.html', context=context)
 
     def build_solutions_map(self,issue,additional_variables, value_map):
-        print("BUILD SOLUTIONS MAP")
-        print(additional_variables)
-        print(len(additional_variables))
         for add_var in additional_variables:
             expr = sympify(add_var.formula)
             numerical_value_map = {k: v for k, v in value_map.items() if not k.endswith('_sign') and not k.endswith('_abs')}
             evaluated = expr.subs(numerical_value_map)
-            print("EVAL:")
-            print(add_var.name)
-            print(expr)
-            print(evaluated)
+
             try:
                 numeric_result = round(float(N(evaluated)), 4)
             except TypeError as e:
@@ -389,35 +381,14 @@ class StartIssueView(generic.View):
 
     def build_answer_options(self, answer_options_db, solutions_map, value_map, substitutions):
         answer_options = []
-        print(solutions_map)
-        print(value_map)
+
         for opt in answer_options_db:
             solution = value_map.get(opt.content)
             
-            # if opt.display_format == 'symbolic':
-            #     raw_description = opt.content
-            #     template = Template(raw_description)
-            #     content = template.render(Context(value_map))
-
-            # elif opt.display_format == 'numeric':
-            #     expr = sympify(opt.content,locals=solutions_map)
-            #     content = expr.evalf(subs=substitutions)
-            #     if float(content) == int(content):
-            #         content= int(content)
-
-            # elif opt.display_format == 'text':
-            #     raw_description = opt.content
-            #     template = Template(raw_description)
-            #     content = template.render(Context(value_map))
-            #     print(f"text for {opt.id}: {opt.display_format} -> {content}")
-            
-            # else:
-            #     content = opt.content
-            #     print(f"Fallback for {opt.id}: {opt.display_format} -> {content}")
             raw_description = opt.content
             template = Template(raw_description)
             rendered_description = template.render(Context(value_map))
-            print(f"RENDER: option for {opt.id}: {opt.display_format} -> {rendered_description}")
+           
             answer_options.append({
                 'id': opt.id,
                 'content': rendered_description,
@@ -540,17 +511,11 @@ class GetSolutionView(generic.View):
             return render(request, 'matematyka/solution.html', {'error': 'Brak rozwiązania dla tego zadania'})
 
         issue_id = request.session.get('submitted_issue_id')
-        # print(f"Issue ID: {issue_id}")
         variables = list(UsedVariable.objects.filter(issue__id=issue_id))
-        # print(f"Variables: {variables}")
         value_map = {var.variable_name: var.variable_value for var in variables}
-        # print(f"Value Map: {value_map}")
         rendered_solution = solution.content
-        # print(f"Raw Solution: {rendered_solution}")
         template_solution = Template(rendered_solution)
-        # print(f"Template Solution: {template_solution}")
         rendered_solution = template_solution.render(Context(value_map))
-        # print(f"Rendered Solution: {rendered_solution}")
 
         return render(request, 'matematyka/solution.html', {'solution': rendered_solution})
 

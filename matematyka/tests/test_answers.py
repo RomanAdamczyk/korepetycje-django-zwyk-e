@@ -5,7 +5,6 @@ from .. import models
 # from ..views import build_solutions_map, build_answer_options
 from sympy import sympify, Symbol
 from django.template import Template, Context
-from pprint import pprint
 
 
 def build_answer_options(answer_options_db, solutions_map, value_map, substitutions):
@@ -63,7 +62,6 @@ def build_solutions_map(additional_variables, value_map):
 @pytest.mark.django_db
 def test_no_duplicate_answers_for_task():
     answer_db = models.AnswerOption.objects.all()
-    print(answer_db)
     variables = models.Variable.objects.all()
     additional_variables = models.AdditionalVariable.objects.all()
 
@@ -84,9 +82,6 @@ def test_no_duplicate_answers_for_task():
 
     solutions_map, substitutions = build_solutions_map(additional_variables, value_map)
     answer_options = build_answer_options(answer_db, solutions_map, value_map, substitutions)
-
-    print("\nOdpowiedzi wygenerowane przez build_answer_options:")
-    pprint(answer_options)  # albo print(answer_options)
 
     answers = defaultdict(list)
     for answer in answer_options:
