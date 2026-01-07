@@ -65,26 +65,44 @@ Zadania przypisane użytkownikowi {{ user.username }}
         <div class="col-lg-1">
             <div class="list-group-item list-group-item-action short-content text-black">
 
-                <a href="{% url 'start_issue' task.task.id %}" class="btn btn-warning">
+                {% with url_base as base_url %}
+                {% if view_type == 'exam' %}
+                {% url 'exam_tasks' exam_level=exam_level exam_date=exam_date source=source as base_url %}
+                {% elif view_type == 'category' %}
+                {% url 'category_tasks' pk=category.pk as base_url %}
+                {% else %}
+                {% url 'assigned_tasks' as base_url %}
+                {% endif %}
+                <a href="{{ base_url }}?task_id={{ task.task.id }}&random=false" class="btn btn-warning">
                     {% if user.is_authenticated %}
                     {{ task.total_attempts_original }} / {{ task.correct_attempts_original }}
                     {% else %}
                     Start
                     {% endif %}
                 </a>
+                {% endwith %}
                 <div id="wynik"></div>
             </div>
         </div>
         <div class="col-lg-1">
             <div class="list-group-item list-group-item-action short-content text-black">
 
-                <a href="{% url 'start_issue' task.task.id %}?random=true" class="btn btn-warning">
+                {% with url_base as base_url %}
+                {% if view_type == 'exam' %}
+                {% url 'exam_tasks' exam_level=exam_level exam_date=exam_date source=source as base_url %}
+                {% elif view_type == 'category' %}
+                {% url 'category_tasks' pk=category.pk as base_url %}
+                {% else %}
+                {% url 'assigned_tasks' as base_url %}
+                {% endif %}
+                <a href="{{ base_url }}?task_id={{ task.task.id }}&random=true" class="btn btn-warning">
                     {% if user.is_authenticated %}
-                    {{ task.total_attempts_random }} / {{ task.correct_attempts_random }}
+                    {{ task.total_attempts_original }} / {{ task.correct_attempts_original }}
                     {% else %}
                     Start
                     {% endif %}
                 </a>
+                {% endwith %}
                 <div id="wynik"></div>
             </div>
         </div>

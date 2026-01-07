@@ -91,6 +91,14 @@ class CategoryListView(generic.ListView):
     template_name = 'matematyka/categories.html'
     context_object_name = 'categories'
 
+    def get(self, request, *args, **kwargs):
+        request.session.pop('origin', None)
+        request.session.pop('issue_id', None)
+        request.session.pop('submitted_issue_id', None)
+        print("Cleared session origin, issue_id, and submitted_issue_id")
+        print(request.session.items())
+        return super().get(request, *args, **kwargs)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         for category in context['categories']:
@@ -134,7 +142,11 @@ class CategoryTasksView(generic.DetailView):
             'type': 'category',
             'id': self.object.id
         }
+        request.session.pop('issue_id', None)
+        request.session.pop('submitted_issue_id', None)        
         context = self.get_context_data(object=self.object)
+        print("Set session origin to category with id:", self.object.id)
+        print(request.session.items())
         return self.render_to_response(context)
     
     def get_context_data(self, **kwargs):
@@ -257,74 +269,71 @@ class StartIssueView(generic.View):
         
     """
 
-
     def get(self, request, task_id):
-        issue = None
-        task = Task.objects.get(id=task_id)
+        print("Starting issue for task_id:", task_id)
+        issue_id = request.session.get('issue_id')
+        if not issue_id:
+            origin = request.session.get('origin')
+            if origin['type'] == 'assigned':
+                return redirect('assigned_tasks')
+            elif origin['type'] == 'exam':
+                return redirect('exam_tasks', exam_level=origin['exam_level'], exam_date=origin['exam_date'], source=origin['source'])
+            elif origin['type'] == 'category':
+                return redirect('category_tasks', pk=origin['id'])
+            else:
+                return redirect('category_list')
+        try:  
+            issue = Issue.objects.get(id=issue_id)
+        except Issue.DoesNotExist:
+            request.session.pop('issue_id', None)
+            if origin['type'] == 'assigned':
+                return redirect('assigned_tasks')
+            elif origin['type'] == 'exam':
+                return redirect('exam_tasks', exam_level=origin['exam_level'], exam_date=origin['exam_date'], source=origin['source'])
+            elif origin['type'] == 'category':
+                return redirect('category_tasks', pk=origin['id'])
+            else:
+                return redirect('category_list')
+            
+        task = issue.task
+        # if issue is None:
+        #     if self.request.GET.get("random") == "true":
+        #         issue = Issue.objects.create(task=task, variable_is_random=True)
+        #     else:
+        #         issue = Issue.objects.create(task=task, variable_is_random=False)
+        #     request.session['issue_id'] = issue.id
 
-        if 'issue_id' in request.session:
+        use_random = request.GET.get("random") == "true"
+        if use_random:
+            variables = self.randomize_variables(task=task)
+        else:
+            variables = Variable.objects.filter(task=task)
+
+        additional_variables = AdditionalVariable.objects.filter(task=task)
+        answer_options_db = AnswerOption.objects.filter(task=task)
+
+        value_map = {}
+
+        for variable in variables:
             try:
-                existing_issue = Issue.objects.get(id=request.session['issue_id'])
-                if existing_issue.task.id == task_id:
-                    issue = existing_issue
-                    variables = list(UsedVariable.objects.filter(issue=issue))
-                    value_map = {var.variable_name: var.variable_value for var in variables}
-                    names = list(value_map.keys())
-                    model_vars = Variable.objects.filter(name__in=names, task=task)
-                    model_additional = AdditionalVariable.objects.filter(name__in=names, task=task)
-                    variables_list = list(model_vars) + list(model_additional)
-                    value_map = self.split_values_to_map(value_map, variables_list, always_positive_zero=False)
-                    numerical_value_map = {k: v for k, v in value_map.items() if not k.endswith('_sign') and not k.endswith('_abs')}
-                    answer_options_db = AnswerOption.objects.filter(task=task)
-                    symbols = {name: Symbol(name) for name in numerical_value_map}
-                    substitutions = {
-                        symbols[k]: int(float(v)) if float(v).is_integer() else float(v)
-                        for k, v in numerical_value_map.items()
-                    }
+                value = float(variable.original_value)
+                if value.is_integer():
+                    formatted = str(int(value))
+                else:
+                    formatted = str(value)
+            except ValueError:
+                value = variable.original_value
+                formatted = value
 
-                    answer_options = self.build_answer_options(answer_options_db, symbols, value_map, substitutions)
-                    
-            except Issue.DoesNotExist:
-                pass
+            value_map[variable.name] = formatted
 
-        if issue is None:
-            if self.request.GET.get("random") == "true":
-                issue = Issue.objects.create(task=task, variable_is_random=True)
-            else:
-                issue = Issue.objects.create(task=task, variable_is_random=False)
-            request.session['issue_id'] = issue.id
-
-            use_random = request.GET.get("random") == "true"
-            if use_random:
-                variables = self.randomize_variables(task=task)
-            else:
-                variables = Variable.objects.filter(task=task)
-
-            additional_variables = AdditionalVariable.objects.filter(task=task)
-            answer_options_db = AnswerOption.objects.filter(task=task)
-
-            value_map = {}
-
-            for variable in variables:
-                try:
-                    value = float(variable.original_value)
-                    if value.is_integer():
-                        formatted = str(int(value))
-                    else:
-                        formatted = str(value)
-                except ValueError:
-                    value = variable.original_value
-                    formatted = value
-
-                value_map[variable.name] = formatted
-
-                UsedVariable.objects.create(
-                    task=task,
-                    issue=issue,
-                    variable=variable,
-                    variable_name=variable.name,
-                    variable_value=str(value)
-                )
+            UsedVariable.objects.create(
+                task=task,
+                issue=issue,
+                variable=variable,
+                variable_name=variable.name,
+                variable_value=str(value)
+            )
 
             value_map = self.split_values_to_map(value_map, variables, always_positive_zero=False)
             solutions_map, substitutions = self.build_solutions_map(issue, additional_variables, value_map)
@@ -348,16 +357,29 @@ class StartIssueView(generic.View):
             expr = sympify(add_var.formula)
             numerical_value_map = {k: v for k, v in value_map.items() if not k.endswith('_sign') and not k.endswith('_abs')}
             evaluated = expr.subs(numerical_value_map)
+            print(f"Debug subs: formula={add_var.formula}, evaluated={evaluated}, map={numerical_value_map}")
 
+            # try:
+            #     numeric_result = round(float(N(evaluated)), 4)
+            # except TypeError as e:
+            #     print("!!!!!Error evaluating additional variable:", add_var.name, "with formula:", add_var.formula)
+            #     raise
+
+            # if numeric_result.is_integer():
+            #     formatted = str(int(numeric_result))
+            # else:
+            #     formatted = str(numeric_result)
+
+            numeric_result = N(evaluated)
             try:
-                numeric_result = round(float(N(evaluated)), 4)
-            except TypeError as e:
-                raise
+                numeric_result = float(numeric_result)
+                numeric_result = round(numeric_result, 4)
+            except (TypeError, ValueError):
+                print(f"Warning: Sympy not numeric for {add_var.formula}: {evaluated} -> using str")
+                numeric_result = str(numeric_result) 
 
-            if numeric_result.is_integer():
-                formatted = str(int(numeric_result))
-            else:
-                formatted = str(numeric_result)
+            # numeric_result = round(numeric_result, 4)
+            formatted = str(numeric_result)
 
             value_map[add_var.name] = formatted
         
@@ -678,6 +700,11 @@ class ExamListView(generic.View):
         exams = Task.objects.values(
             'exam_date', 'task_level__exam_level', 'source__name'
         ).annotate(task_count=Count('id')).order_by('exam_date')
+        request.session.pop('origin', None)
+        request.session.pop('issue_id', None)
+        request.session.pop('submitted_issue_id', None)
+        print("Cleared session origin, issue_id, and submitted_issue_id")
+        print(request.session.items())
 
         grouped_exams = {}
         for exam in exams:
@@ -690,7 +717,8 @@ class ExamListView(generic.View):
             grouped_exams[date].append((name, count, source))
 
         context = {
-            'grouped_exams': grouped_exams
+            'grouped_exams': grouped_exams,
+            'tasks_url_name' : 'exam_tasks'
         }
         return render(request, 'matematyka/exams.html', context)
     
@@ -706,12 +734,36 @@ class ExamTasksView(generic.ListView):
             'exam_date': self.kwargs.get('exam_date'),
             'source': self.kwargs.get('source'),
         }
+        # request.session.pop('issue_id', None)
+        # request.session.pop('submitted_issue_id', None)
+        print("Set session origin to exam:", request.session['origin'])
+        print(request.session.items())
+        print("GET params:", self.request.GET.items())
+
+        task_id = self.request.GET.get('task_id')
+        random_param = self.request.GET.get('random')
+
+        print("task_id:", task_id, "random_param:", random_param)
+
+        if task_id:
+            try:
+                task = Task.objects.get(id=task_id)
+                variable_is_random = random_param == 'true'
+                issue = Issue.objects.create(task=task, variable_is_random=variable_is_random)
+                request.session['issue_id'] = issue.id
+                request.session['submitted_issue_id'] = issue.id 
+                return redirect('start_issue', task_id=task.id)  
+            except Task.DoesNotExist:
+                print("Task with id", task_id, "does not exist.")
+                messages.error(request, 'Zadanie nie istnieje.')
+                return redirect('exam_tasks',exam_level=self.kwargs['exam_level'], exam_date=self.kwargs['exam_date'], source=self.kwargs['source'])
+
         return super().get(request, *args, **kwargs)
 
     def get_queryset(self):
-        exam_level = self.kwargs.get('exam_level')
-        exam_date = self.kwargs.get('exam_date')
-        source = self.kwargs.get('source')
+        exam_level = self.kwargs.get('exam_level','').strip()
+        exam_date = self.kwargs.get('exam_date','').strip()
+        source = self.kwargs.get('source','').strip()
 
         queryset = Task.objects.filter(
             task_level__exam_level=exam_level,
@@ -790,6 +842,11 @@ class ExamTasksView(generic.ListView):
         context['exam_date'] = self.kwargs.get('exam_date')
         context['source'] = self.kwargs.get('source')
         context['view_type'] = 'exam'
+        context['tasks_url_name'] = 'exam_tasks'
+        context['tasks_kwargs'] = {
+            'exam_level': self.kwargs.get('exam_level'),
+            'exam_date': self.kwargs.get('exam_date'),
+            'source': self.kwargs.get('source')}
         return context
 
 class AssignedTasksView(generic.ListView):
@@ -801,6 +858,10 @@ class AssignedTasksView(generic.ListView):
         request.session['origin'] = {
             'type': 'assigned',
         }
+        request.session.pop('issue_id', None)
+        request.session.pop('submitted_issue_id', None)
+        print("Set session origin to assigned tasks")
+        print(request.session.items()) 
         return super().get(request, *args, **kwargs)
 
     def get_queryset(self):
