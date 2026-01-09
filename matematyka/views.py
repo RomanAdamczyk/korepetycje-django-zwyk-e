@@ -273,7 +273,15 @@ class StartIssueView(generic.View):
                     model_vars = Variable.objects.filter(name__in=names, task=task)
                     model_additional = AdditionalVariable.objects.filter(name__in=names, task=task)
                     variables_list = list(model_vars) + list(model_additional)
+              
                     value_map = self.split_values_to_map(value_map, variables_list, always_positive_zero=False)
+                    for k, v in value_map.items():
+                        try:
+                            value_float = float(v)
+                            value_float.is_integer()
+                            value_map[k] = str(int(float(v)))
+                        except ValueError:
+                            value_map[k] = value_float
                     numerical_value_map = {k: v for k, v in value_map.items() if not k.endswith('_sign') and not k.endswith('_abs')}
                     answer_options_db = AnswerOption.objects.filter(task=task)
                     symbols = {name: Symbol(name) for name in numerical_value_map}
@@ -286,6 +294,7 @@ class StartIssueView(generic.View):
                     
             except Issue.DoesNotExist:
                 pass
+
 
         if issue is None:
             if self.request.GET.get("random") == "true":
@@ -513,6 +522,14 @@ class GetSolutionView(generic.View):
         issue_id = request.session.get('submitted_issue_id')
         variables = list(UsedVariable.objects.filter(issue__id=issue_id))
         value_map = {var.variable_name: var.variable_value for var in variables}
+        for k, v in value_map.items():
+            try:
+                value_float = float(v)
+                value_float.is_integer()
+                value_map[k] = str(int(float(v)))
+            except ValueError:
+                value_map[k] = value_float
+
         rendered_solution = solution.content
         template_solution = Template(rendered_solution)
         rendered_solution = template_solution.render(Context(value_map))
@@ -575,6 +592,13 @@ class AnswerResultView(generic.View):
 
         variables = list(UsedVariable.objects.filter(issue=issue))
         value_map = {var.variable_name: var.variable_value for var in variables}
+        for k, v in value_map.items():
+            try:
+                value_float = float(v)
+                value_float.is_integer()
+                value_map[k] = str(int(float(v)))
+            except ValueError:
+                value_map[k] = value_float
 
         user_answer = UserAnswer.objects.filter(issue=issue).first()
 
