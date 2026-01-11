@@ -2,7 +2,10 @@
 
 
 {% block content %}
-
+<div class="alert alert-dark mb-3">
+    {{ exam_info.level }} {{ exam_info.date|date:"d.m.Y" }} ({{ exam_info.source }}) - Zad. {{ exam_info.number }} - 
+    Kategorie: {{ exam_info.categories|join:", " }}
+</div>
 <div class="task-content">
     {{description|safe}}
 
@@ -10,7 +13,7 @@
 
     <form method="post" action="{% url 'answer'  task_id=issue.task.id %}">
         {% csrf_token %}
-         
+
         <div class="row row-cols-1 row-cols-md-2 g-3">
             {% for answer in answer_options %}
             <div class="col">
@@ -27,7 +30,8 @@
                     <span class="plain-text">{{ answer.content | safe }}</span>
                     <!-- Fallback pokazuje surowy content -->
                     {% endif %}
-                </label>            </div>
+                </label>
+            </div>
             {% endfor %}
         </div>
         <div class="mt-4">

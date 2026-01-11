@@ -264,7 +264,15 @@ class StartIssueView(generic.View):
 
         if 'issue_id' in request.session:
             try:
-                existing_issue = Issue.objects.get(id=request.session['issue_id'])
+                existing_issue = Issue.objects.select_related('task__task_level', 'task__source', 'task__task_type').prefetch_related(
+                    'task__category').get(id=request.session['issue_id'])
+                exam_info = {
+                    'number': task.sub_number,
+                    'level': task.task_level.exam_level if task.task_level else 'Nieznany',
+                    'date': task.exam_date,
+                    'source': task.source.name if task.source else 'Nieznane',
+                    'categories': [cat.name for cat in task.category.all()]}
+
                 if existing_issue.task.id == task_id:
                     issue = existing_issue
                     variables = list(UsedVariable.objects.filter(issue=issue))
@@ -347,7 +355,8 @@ class StartIssueView(generic.View):
             'issue': issue,
             'variables': value_map,
             'answer_options': answer_options,
-            'description': rendered_description
+            'description': rendered_description,
+            'exam_info': exam_info,
             }
        
         return render(request, 'matematyka/issue.html', context=context)
