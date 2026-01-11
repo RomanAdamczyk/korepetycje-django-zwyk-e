@@ -1,7 +1,10 @@
 {% extends 'base.html' %}
 
 {% block content %}
-
+<div class="alert alert-dark mb-3">
+    {{ exam_info.level }} {{ exam_info.date|date:"d.m.Y" }} ({{ exam_info.source }}) - Zad. {{ exam_info.number }} - 
+    Kategorie: {{ exam_info.categories|join:", " }}
+</div>
 <div class="task-content">
     {{ description|safe }}
 

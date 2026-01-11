@@ -260,18 +260,18 @@ class StartIssueView(generic.View):
 
     def get(self, request, task_id):
         issue = None
-        task = Task.objects.get(id=task_id)
+        task = Task.objects.select_related('task_level', 'source', 'task_type').prefetch_related(
+                    'category').get(id=task_id)
+        exam_info = {
+            'number': task.sub_number,
+            'level': task.task_level.exam_level if task.task_level else 'Nieznany',
+            'date': task.exam_date,
+            'source': task.source.name if task.source else 'Nieznane',
+            'categories': [cat.name for cat in task.category.all()]}        
 
         if 'issue_id' in request.session:
             try:
-                existing_issue = Issue.objects.select_related('task__task_level', 'task__source', 'task__task_type').prefetch_related(
-                    'task__category').get(id=request.session['issue_id'])
-                exam_info = {
-                    'number': task.sub_number,
-                    'level': task.task_level.exam_level if task.task_level else 'Nieznany',
-                    'date': task.exam_date,
-                    'source': task.source.name if task.source else 'Nieznane',
-                    'categories': [cat.name for cat in task.category.all()]}
+                existing_issue = Issue.objects.get(id=request.session['issue_id'])
 
                 if existing_issue.task.id == task_id:
                     issue = existing_issue
@@ -557,16 +557,25 @@ class SubmitAnswerView(generic.View):
 
 class AnswerResultView(generic.View):
     def get(self, request, task_id):
-        try:
-            task = Task.objects.get(id=task_id)
-        except Task.DoesNotExist:
-            return render(request, 'matematyka/issue.html', {'error': 'Zadanie nie istnieje'})
+        # try:
+        #     task = Task.objects.get(id=task_id)
+        # except Task.DoesNotExist:
+        #     return render(request, 'matematyka/issue.html', {'error': 'Zadanie nie istnieje'})
                 
         try:
-            issue = Issue.objects.get(id=request.session.get('submitted_issue_id'))
+            issue = Issue.objects.select_related('task__task_level','task__source', 'task__task_type').prefetch_related(
+                'task__category').get(id=request.session.get('submitted_issue_id'))
         except Issue.DoesNotExist:
             return render(request, 'matematyka/issue.html', {'error': 'Brak aktywnego zadania'})
         
+        task = issue.task
+        exam_info = {
+            'number': task.sub_number,
+            'level': task.task_level.exam_level if task.task_level else 'Nieznany',
+            'date': task.exam_date,
+            'source': task.source.name if task.source else 'Nieznane',
+            'categories': [cat.name for cat in task.category.all()]}        
+
         user = request.user if request.user.is_authenticated else None
 
         if user:
@@ -669,6 +678,7 @@ class AnswerResultView(generic.View):
             'description': rendered_description,
             'answer_options': answer_options,
             'next_task_id': next_task_id,
+            'exam_info': exam_info,
         })
 
 class RepeatIssueView(generic.View):
