@@ -184,7 +184,6 @@ class AdditionalVariable(models.Model):
     name = models.CharField(max_length=100)  # np. 'potega', 'roznica'
     formula = models.CharField(max_length=200, null=True, blank=True)  # np. 'liczba1 ** liczba2'
     split_sign = models.BooleanField(default=False)
-    # save_result = models.BooleanField(default=False)  
 
     def __str__(self):
         return f"AdditionalVariable {self.name} for task {self.task.id}: {self.formula}"
@@ -299,13 +298,7 @@ class AssignedTask(models.Model):
             any(opt.is_correct for opt in ua.answer_options.all())
             for ua in ua_qs
     )
-        # user_answers = UserAnswer.objects.filter(
-        #     issue__task=self.task,
-        #     user=self.user,
-        #     answer_date__gte=self.assigned_date,
-        #     answer_options__is_correct=True
-        # ).select_related('issue__task', 'user').prefetch_related('answer_options').distinct()
-     
+
         return has_completion
 
 

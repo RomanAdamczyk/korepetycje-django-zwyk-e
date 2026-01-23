@@ -23,10 +23,10 @@ def split_values_to_map(value_map, variables_list, always_positive_zero=False):
                 abs_value_str = str(int(abs_value))
             else:
                 abs_value_str = str(abs_value)
-            print(f"Variable {var.name}: value={value}, sign={znak}, abs={abs_value_str}")
+
             value_map[f"{var.name}_sign"] = znak
             value_map[f"{var.name}_abs"] = abs_value_str
-    print("Final value_map:", value_map)
+
     return value_map
 
 def format_value_map(value_map):

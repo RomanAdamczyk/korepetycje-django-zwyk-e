@@ -104,7 +104,7 @@ class UserAnswerAdmin(admin.ModelAdmin):
     list_filter = ['used_hint']
     
 class SolutionAdmin(admin.ModelAdmin):
-    list_display = ['id', 'task'] #, 'content']
+    list_display = ['id', 'task'] 
     search_fields = ['task']
     list_filter = ['task']
 

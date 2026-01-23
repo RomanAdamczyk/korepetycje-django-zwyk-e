@@ -65,11 +65,8 @@ class RegisterView(generic.CreateView):
         user.save(update_fields=['is_active'])
         default_group, created = Group.objects.get_or_create(name='Uzytkownicy')
         user.groups.add(default_group)
-        # if user:
-        #     login(self.request, user)
 
         return redirect('category_list')
-
 class CategoryListView(generic.ListView):
     """
     Display a list of math problem categories.
@@ -156,8 +153,6 @@ class CategoryTasksView(generic.DetailView):
                 'task__issues__user_answers',
                  queryset=UserAnswer.objects.filter(
                      user = user,
-                    #  answer_date__gte=OuterRef('assigned_date'),
-                    #  answer_options__is_correct=True
                      ).select_related('issue__task', 'user').prefetch_related('answer_options')))
         
         assigned_by_task = {at.task_id: at for at in assigned_tasks}
@@ -282,7 +277,7 @@ class StartIssueView(generic.View):
                             value_map[f"{used.variable_name}_abs"] = split['abs']
             
                     value_map = format_value_map(value_map)
-                    print("Value map :", value_map)        
+     
                     numerical_value_map = {k: v for k, v in value_map.items() if not k.endswith('_sign') and not k.endswith('_abs')}
                     symbols = {name: Symbol(name) for name in numerical_value_map}
                     substitutions = {
@@ -349,7 +344,7 @@ class StartIssueView(generic.View):
                 for k, v in numerical_value_map.items()
             }    
             answer_options = self.build_answer_options(answer_options_db, solutions_map, value_map, substitutions)
-        print("Value map for rendering description:", value_map)
+
         raw_description = task.content
         template = Template(raw_description)
         rendered_description = template.render(Context(value_map))
@@ -408,7 +403,6 @@ class StartIssueView(generic.View):
                 
         value_map = format_value_map(value_map)
         numerical_value_map = {k: v for k, v in value_map.items() if not k.endswith('_sign') and not k.endswith('_abs')}
-        # value_map = split_values_to_map(value_map, additional_variables, always_positive_zero=False)
         symbols = {name: Symbol(name) for name in numerical_value_map}
         
         substitutions = {
@@ -486,7 +480,7 @@ class GetHintView(generic.View):
             task = Task.objects.get(id=task_id)
         except Task.DoesNotExist:
             return render(request, 'matematyka/hint.html', {'error': 'Zadanie nie istnieje'})
-        # issue_id=request.session.get('issue_id')
+
         try:
             issue = Issue.objects.get(id=request.session.get('issue_id'))
             user = request.user if request.user.is_authenticated else None
@@ -527,20 +521,8 @@ class GetSolutionView(generic.View):
             if split:
                 value_map[f"{used.variable_name}_sign"] = split['sign']
                 value_map[f"{used.variable_name}_abs"] = split['abs']    
-
-        # for k, v in value_map.items():
-        #     try:
-        #         value_float = float(v)
-        #         value_float.is_integer()
-        #         value_map[k] = str(int(float(v)))
-        #     except ValueError:
-        #         value_map[k] = v
-            # print(f"Value map for solution rendering: {value_map}, var: {k}={v}")
         
         value_map = format_value_map(value_map)
-        numeric_value_map = {k: v for k, v in value_map.items() if not k.endswith('_sign') and not k.endswith('_abs')}
-        print (f"solusion value_map after formatting: {value_map}")
-        # value_map = split_values_to_map(value_map, variables, always_positive_zero=False)
 
         rendered_solution = solution.content
         template_solution = Template(rendered_solution)
@@ -560,11 +542,7 @@ class SubmitAnswerView(generic.View):
 
 class AnswerResultView(generic.View):
     def get(self, request, task_id):
-        # try:
-        #     task = Task.objects.get(id=task_id)
-        # except Task.DoesNotExist:
-        #     return render(request, 'matematyka/issue.html', {'error': 'Zadanie nie istnieje'})
-                
+             
         try:
             issue = Issue.objects.select_related('task__task_level','task__source', 'task__task_type').prefetch_related(
                 'task__category').get(id=request.session.get('submitted_issue_id'))
@@ -596,7 +574,6 @@ class AnswerResultView(generic.View):
                 user_answer.save()
                 user_answer.answer_options.set([selected_option])
             except AnswerOption.DoesNotExist:
-                # błąd: odpowiedź nie istnieje
                 return render(request, 'matematyka/issue.html', {
                     'issue': issue,
                     'task': task,
@@ -616,23 +593,13 @@ class AnswerResultView(generic.View):
 
         for used in used_variables:
             split = used.split_map
-            print(f"Used variable: {used.variable_name}, value: {used.variable_value}, split: {split}")
+
             if split:
                 value_map[f"{used.variable_name}_sign"] = split['sign']
                 value_map[f"{used.variable_name}_abs"] = split['abs']    
 
         value_map = format_value_map(value_map)
         numeric_value_map = {k: v for k, v in value_map.items() if not k.endswith('_sign') and not k.endswith('_abs')}
-        # value_map = used.split_map(value_map, variables, always_positive_zero=False)
-        print (f"Answer value_map after formatting: {value_map}")
-
-        # for k, v in value_map.items():
-        #     try:
-        #         value_float = float(v)
-        #         value_float.is_integer()
-        #         value_map[k] = str(int(float(v)))
-        #     except ValueError:
-        #         value_map[k] = value_float
 
         user_answer = UserAnswer.objects.filter(issue=issue).first()
 
@@ -678,8 +645,6 @@ class AnswerResultView(generic.View):
                 if next_task:
                     next_task_id = next_task.id
           
-            # elif origin_type == 'random':
-            #
         assigned_task = AssignedTask.objects.filter(user=user, task=task, is_completed=False).first()
         if is_correct and assigned_task:
             assigned_task.is_completed = True
@@ -715,19 +680,9 @@ class NextIssueView(generic.View):
         request.session.pop('submitted_issue_id')
         request.session.pop('selected_answer_id')
 
-        # if origin['type'] == 'exam':
-        #     exam_id = origin['id']
-        #     # logika: pobierz kolejne zadanie z tego egzaminu
-        #     return redirect('start_next_exam_task', exam_id=exam_id)
-        # elif i ciąg dalszy
-
         if origin['type'] == 'category':
             category_id = origin['id']
             return redirect('start_next_category_task', category_id=category_id)
-
-        # elif origin['type'] == 'random':
-        #     return redirect('start_random_task')
-
         else:
             return redirect('category_list')
         
@@ -797,8 +752,6 @@ class ExamTasksView(generic.ListView):
                 'task__issues__user_answers',
                  queryset=UserAnswer.objects.filter(
                      user = user,
-                    #  answer_date__gte=OuterRef('assigned_date'),
-                    #  answer_options__is_correct=True
                      ).select_related('issue__task', 'user').prefetch_related('answer_options')))
         
         assigned_by_task = {at.task_id: at for at in assigned_tasks}
@@ -915,7 +868,6 @@ class AssignedTasksView(generic.ListView):
                     'is_completed' : assigned.completion_date,
                     'deadline' : assigned.deadline if not assigned.completion_date else None,
                     'overdue' : overdue,
-                    # 'status_group': 'pilne' if not is_completed and overdue else 'do_zrobienia' if not is_completed else 'zrobione_przed' if assigned.deadline > timezone.now() else 'zrobione_po'
                 })
  
         context['tasks'] = tasks
