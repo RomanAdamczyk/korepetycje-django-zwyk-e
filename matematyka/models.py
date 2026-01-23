@@ -197,13 +197,39 @@ class UsedVariable(models.Model):
         task (Task): The task in which the variable is used.
         issue (Issue): The issue in which the variable is used.
         variable (Variable): The variable that is used.
+        variable_name (str): The name of the variable used in the task.
         variable_value (str): The value of the variable used in the task.
+        split_sign (bool): Indicates if the variable should be split by sign.
         '''
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='used_variables')
     issue = models.ForeignKey(Issue, on_delete=models.CASCADE, related_name='used_variables')
     variable = models.ForeignKey(Variable, on_delete=models.CASCADE, related_name='used_variables', null=True, blank=True)
+    additional_variable = models.ForeignKey(AdditionalVariable, on_delete=models.CASCADE, related_name='used_variables', null=True, blank=True) 
     variable_name = models.CharField(max_length=100)
     variable_value = models.CharField(max_length=50)
+    split_values = models.JSONField(default=False, blank=True)
+
+    @property
+    def split_map(self):
+        if self.split_values:
+            return self.split_values
+        split_flag = False
+        if self.variable:
+            split_flag = self.variable.split_sign
+        elif self.additional_variable:
+            split_flag = self.additional_variable.split_sign
+        if split_flag:
+            try:
+                value = float(self.variable_value or 0)
+                sign = '-' if value < 0 else '+' if value > 0 else ''
+                abs_value = abs(value)
+                abs_str = str(int(abs_value)) if abs_value.is_integer() else str(abs_value)
+                self.split_values = {'sign': sign, 'abs': abs_str}
+                self.save(update_fields=['split_values']) 
+                return self.split_values
+            except ValueError:
+                return {}
+        return {}  
 
     def __str__(self):
         variable_name = self.variable.name if self.variable else "(no variable)"

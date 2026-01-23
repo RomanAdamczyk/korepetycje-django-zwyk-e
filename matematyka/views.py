@@ -12,6 +12,7 @@ from django.conf import settings
 
 from .models import Category, Issue, Task, UsedVariable, AnswerOption, AdditionalVariable, Variable, UserAnswer, Solution, AssignedTask
 from .forms import RegisterForm
+from .utils import format_value_map
 
 import numpy as np
 import random
@@ -253,11 +254,8 @@ class StartIssueView(generic.View):
         associated with the task and randomly selects a value for each variable
         from its choices or generates a range of values. The method updates
         the original value of each variable with the randomly selected value.
-        It returns the list of variables with their new randomized values.
-        
+        It returns the list of variables with their new randomized values.        
     """
-
-
     def get(self, request, task_id):
         issue = None
         task = Task.objects.select_related('task_level', 'source', 'task_type').prefetch_related(
@@ -272,47 +270,36 @@ class StartIssueView(generic.View):
         if 'issue_id' in request.session:
             try:
                 existing_issue = Issue.objects.get(id=request.session['issue_id'])
-
                 if existing_issue.task.id == task_id:
                     issue = existing_issue
-                    variables = list(UsedVariable.objects.filter(issue=issue))
-                    value_map = {var.variable_name: var.variable_value for var in variables}
-                    names = list(value_map.keys())
-                    model_vars = Variable.objects.filter(name__in=names, task=task)
-                    model_additional = AdditionalVariable.objects.filter(name__in=names, task=task)
-                    variables_list = list(model_vars) + list(model_additional)
-              
-                    value_map = self.split_values_to_map(value_map, variables_list, always_positive_zero=False)
-                    for k, v in value_map.items():
-                        try:
-                            value_float = float(v)
-                            value_float.is_integer()
-                            value_map[k] = str(int(float(v)))
-                        except ValueError:
-                            value_map[k] = value_float
+                    used_variables = list(UsedVariable.objects.filter(issue=issue))
+                    value_map = {used.variable_name: used.variable_value for used in used_variables}
+
+                    for used in used_variables:
+                        split = used.split_map
+                        if split:
+                            value_map[f"{used.variable_name}_sign"] = split['sign']
+                            value_map[f"{used.variable_name}_abs"] = split['abs']
+            
+                    value_map = format_value_map(value_map)
+                    print("Value map :", value_map)        
                     numerical_value_map = {k: v for k, v in value_map.items() if not k.endswith('_sign') and not k.endswith('_abs')}
-                    answer_options_db = AnswerOption.objects.filter(task=task)
                     symbols = {name: Symbol(name) for name in numerical_value_map}
                     substitutions = {
                         symbols[k]: int(float(v)) if float(v).is_integer() else float(v)
                         for k, v in numerical_value_map.items()
                     }
-
+                    answer_options_db = AnswerOption.objects.filter(task=task)
                     answer_options = self.build_answer_options(answer_options_db, symbols, value_map, substitutions)
-                    
             except Issue.DoesNotExist:
                 pass
 
-
         if issue is None:
-            if self.request.GET.get("random") == "true":
-                issue = Issue.objects.create(task=task, variable_is_random=True)
-            else:
-                issue = Issue.objects.create(task=task, variable_is_random=False)
+            random_param = self.request.GET.get("random") == "true"
+            issue = Issue.objects.create(task=task, variable_is_random=random_param)
             request.session['issue_id'] = issue.id
 
-            use_random = request.GET.get("random") == "true"
-            if use_random:
+            if random_param:
                 variables = self.randomize_variables(task=task)
             else:
                 variables = Variable.objects.filter(task=task)
@@ -321,6 +308,7 @@ class StartIssueView(generic.View):
             answer_options_db = AnswerOption.objects.filter(task=task)
 
             value_map = {}
+            used_variables = []
 
             for variable in variables:
                 try:
@@ -335,22 +323,36 @@ class StartIssueView(generic.View):
 
                 value_map[variable.name] = formatted
 
-                UsedVariable.objects.create(
+                used_variable = UsedVariable.objects.create(
                     task=task,
                     issue=issue,
                     variable=variable,
+                    additional_variable=None,
                     variable_name=variable.name,
                     variable_value=str(value)
                 )
+                used_variables.append(used_variable)
 
-            value_map = self.split_values_to_map(value_map, variables, always_positive_zero=False)
+            for used in used_variables:
+                split = used.split_map
+                if split:
+                    value_map[f"{used.variable_name}_sign"] = split['sign']
+                    value_map[f"{used.variable_name}_abs"] = split['abs']
+                    
+            value_map = format_value_map(value_map)
+
             solutions_map, substitutions = self.build_solutions_map(issue, additional_variables, value_map)
+            numerical_value_map = {k: v for k, v in value_map.items() if not k.endswith('_sign') and not k.endswith('_abs')}
+            symbols = {name: Symbol(name) for name in numerical_value_map}
+            substitutions = {
+                symbols[k]: int(float(v)) if float(v).is_integer() else float(v)
+                for k, v in numerical_value_map.items()
+            }    
             answer_options = self.build_answer_options(answer_options_db, solutions_map, value_map, substitutions)
-
+        print("Value map for rendering description:", value_map)
         raw_description = task.content
         template = Template(raw_description)
         rendered_description = template.render(Context(value_map))
-
         context = {
             'issue': issue,
             'variables': value_map,
@@ -362,10 +364,17 @@ class StartIssueView(generic.View):
         return render(request, 'matematyka/issue.html', context=context)
 
     def build_solutions_map(self,issue,additional_variables, value_map):
+        used_variables = []
         for add_var in additional_variables:
             expr = sympify(add_var.formula)
-            numerical_value_map = {k: v for k, v in value_map.items() if not k.endswith('_sign') and not k.endswith('_abs')}
-            evaluated = expr.subs(numerical_value_map)
+    
+            if hasattr(add_var, 'split_map'):
+                split = add_var.split_map
+                if split:
+                    value_map[f"{add_var.variable_name}_sign"] = split['sign']
+                    value_map[f"{add_var.variable_name}_abs"] = split['abs']
+                
+            evaluated = expr.subs(value_map)
 
             try:
                 numeric_result = round(float(N(evaluated)), 4)
@@ -379,15 +388,27 @@ class StartIssueView(generic.View):
 
             value_map[add_var.name] = formatted
         
-            UsedVariable.objects.create(
+            used_variable = UsedVariable.objects.create(
                 task=issue.task,
                 issue=issue,
                 variable=None,
+                additional_variable=add_var,
                 variable_name=add_var.name,
                 variable_value=str(numeric_result)
             )
+            used_variable.split_sign = add_var.split_sign
+            used_variable.save(update_fields=['split_values'])
+            used_variables.append(used_variable)
 
-        value_map = self.split_values_to_map(value_map, additional_variables, always_positive_zero=False)
+        for used in used_variables:
+            split = used.split_map
+            if split:
+                value_map[f"{used.variable_name}_sign"] = split['sign']
+                value_map[f"{used.variable_name}_abs"] = split['abs']
+                
+        value_map = format_value_map(value_map)
+        numerical_value_map = {k: v for k, v in value_map.items() if not k.endswith('_sign') and not k.endswith('_abs')}
+        # value_map = split_values_to_map(value_map, additional_variables, always_positive_zero=False)
         symbols = {name: Symbol(name) for name in numerical_value_map}
         
         substitutions = {
@@ -459,37 +480,6 @@ class StartIssueView(generic.View):
                 raise Exception(f"Nie można wygenerować unikalnych wartości dla grupy zmiennych: {group_name}")
         return variables
     
-    def split_values_to_map(self, value_map, variables_list, always_positive_zero=False):
-        for var in variables_list:
-            if var.split_sign:
-                value_str = value_map.get(var.name, '0')
-                value = float(value_str)
-
-                if value.is_integer():
-                    value_map[var.name] = str(int(value))
-                else:
-                    value_map[var.name] = str(value)
-                if value < 0:
-                    znak = '-'
-                elif value > 0:
-                    znak = '+'
-                elif always_positive_zero:
-                    znak = '+'
-                else:
-                    znak = ''
-
-                abs_value = abs(value)
-                
-                if abs_value.is_integer():
-                    abs_value_str = str(int(abs_value))
-                else:
-                    abs_value_str = str(abs_value)
-
-                value_map[f"{var.name}_sign"] = znak
-                value_map[f"{var.name}_abs"] = abs_value_str
-        
-        return value_map
-
 class GetHintView(generic.View):
     def get(self, request, task_id):
         try:
@@ -529,15 +519,28 @@ class GetSolutionView(generic.View):
             return render(request, 'matematyka/solution.html', {'error': 'Brak rozwiązania dla tego zadania'})
 
         issue_id = request.session.get('submitted_issue_id')
-        variables = list(UsedVariable.objects.filter(issue__id=issue_id))
-        value_map = {var.variable_name: var.variable_value for var in variables}
-        for k, v in value_map.items():
-            try:
-                value_float = float(v)
-                value_float.is_integer()
-                value_map[k] = str(int(float(v)))
-            except ValueError:
-                value_map[k] = value_float
+        used_variables = list(UsedVariable.objects.filter(issue__id=issue_id))
+        value_map = {var.variable_name: var.variable_value for var in used_variables}
+
+        for used in used_variables:
+            split = used.split_map
+            if split:
+                value_map[f"{used.variable_name}_sign"] = split['sign']
+                value_map[f"{used.variable_name}_abs"] = split['abs']    
+
+        # for k, v in value_map.items():
+        #     try:
+        #         value_float = float(v)
+        #         value_float.is_integer()
+        #         value_map[k] = str(int(float(v)))
+        #     except ValueError:
+        #         value_map[k] = v
+            # print(f"Value map for solution rendering: {value_map}, var: {k}={v}")
+        
+        value_map = format_value_map(value_map)
+        numeric_value_map = {k: v for k, v in value_map.items() if not k.endswith('_sign') and not k.endswith('_abs')}
+        print (f"solusion value_map after formatting: {value_map}")
+        # value_map = split_values_to_map(value_map, variables, always_positive_zero=False)
 
         rendered_solution = solution.content
         template_solution = Template(rendered_solution)
@@ -608,22 +611,35 @@ class AnswerResultView(generic.View):
         correct_answer = AnswerOption.objects.filter(task=task, is_correct=True).first()
         is_correct = selected_option == correct_answer
 
-        variables = list(UsedVariable.objects.filter(issue=issue))
-        value_map = {var.variable_name: var.variable_value for var in variables}
-        for k, v in value_map.items():
-            try:
-                value_float = float(v)
-                value_float.is_integer()
-                value_map[k] = str(int(float(v)))
-            except ValueError:
-                value_map[k] = value_float
+        used_variables = list(UsedVariable.objects.filter(issue=issue))
+        value_map = {var.variable_name: var.variable_value for var in used_variables}
+
+        for used in used_variables:
+            split = used.split_map
+            print(f"Used variable: {used.variable_name}, value: {used.variable_value}, split: {split}")
+            if split:
+                value_map[f"{used.variable_name}_sign"] = split['sign']
+                value_map[f"{used.variable_name}_abs"] = split['abs']    
+
+        value_map = format_value_map(value_map)
+        numeric_value_map = {k: v for k, v in value_map.items() if not k.endswith('_sign') and not k.endswith('_abs')}
+        # value_map = used.split_map(value_map, variables, always_positive_zero=False)
+        print (f"Answer value_map after formatting: {value_map}")
+
+        # for k, v in value_map.items():
+        #     try:
+        #         value_float = float(v)
+        #         value_float.is_integer()
+        #         value_map[k] = str(int(float(v)))
+        #     except ValueError:
+        #         value_map[k] = value_float
 
         user_answer = UserAnswer.objects.filter(issue=issue).first()
 
-        symbols = {name: Symbol(name) for name in value_map}
+        symbols = {name: Symbol(name) for name in numeric_value_map}
         substitutions = {
             symbols[k]: int(float(v)) if float(v).is_integer() else float(v)
-            for k, v in value_map.items()
+            for k, v in numeric_value_map.items()
         }
 
         answer_options_db = AnswerOption.objects.filter(task=task)
