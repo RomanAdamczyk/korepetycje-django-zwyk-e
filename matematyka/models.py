@@ -206,7 +206,7 @@ class UsedVariable(models.Model):
     additional_variable = models.ForeignKey(AdditionalVariable, on_delete=models.CASCADE, related_name='used_variables', null=True, blank=True) 
     variable_name = models.CharField(max_length=100)
     variable_value = models.CharField(max_length=50)
-    split_values = models.JSONField(default=False, blank=True)
+    split_values = models.JSONField(default=dict, blank=True)
 
     @property
     def split_map(self):
