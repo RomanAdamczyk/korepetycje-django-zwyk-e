@@ -21,3 +21,17 @@ urlpatterns = [
     path("matematyka/", include("matematyka.urls")),
     path("admin/", admin.site.urls),
 ]
+
+from django.conf import settings
+from django.conf.urls.static import static
+
+# if settings.DEBUG is False:  # <-- ważne, żeby działało też przy DEBUG=False
+urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
+if not settings.DEBUG:
+    from django.views.static import serve
+    from django.urls import re_path
+
+    urlpatterns += [
+        re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),
+    ]
