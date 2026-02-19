@@ -23,6 +23,7 @@ dmypy.json
 
 # Django stuff
 db.sqlite3
+*.sqlite3
 media/
 
 # systemowe
