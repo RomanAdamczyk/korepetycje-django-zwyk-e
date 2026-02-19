@@ -304,7 +304,7 @@ class StartIssueView(generic.View):
 
             value_map = {}
             used_variables = []
-
+            print("\n[DEBUG] Zmienna random_param:", random_param)
             for variable in variables:
                 try:
                     value = float(variable.original_value)
@@ -328,6 +328,8 @@ class StartIssueView(generic.View):
                 )
                 used_variables.append(used_variable)
 
+            print("\n[DEBUG] value_map PO zwykłych zmiennych:", value_map)
+
             for used in used_variables:
                 split = used.split_map
                 if split:
@@ -335,8 +337,9 @@ class StartIssueView(generic.View):
                     value_map[f"{used.variable_name}_abs"] = split['abs']
                     
             value_map = format_value_map(value_map)
-
+            print("Value map after formatting:", value_map)
             solutions_map, substitutions = self.build_solutions_map(issue, additional_variables, value_map)
+            print("Solutions map:", solutions_map)
             numerical_value_map = {k: v for k, v in value_map.items() if not k.endswith('_sign') and not k.endswith('_abs')}
             symbols = {name: Symbol(name) for name in numerical_value_map}
             substitutions = {
@@ -361,28 +364,33 @@ class StartIssueView(generic.View):
     def build_solutions_map(self,issue,additional_variables, value_map):
         used_variables = []
         for add_var in additional_variables:
+            print(f"\n[DEBUG] Evaluating additional variable: {add_var.name} with formula: {add_var.formula} and value map: {value_map}")
             expr = sympify(add_var.formula)
-    
+            print(f"[DEBUG] Parsed expression for {add_var.name}: {expr}")
+            numerical_value_map = {
+                k: v for k, v in value_map.items() 
+                if not k.endswith('_sign') and not k.endswith('_abs')
+            }
             if hasattr(add_var, 'split_map'):
                 split = add_var.split_map
                 if split:
                     value_map[f"{add_var.variable_name}_sign"] = split['sign']
                     value_map[f"{add_var.variable_name}_abs"] = split['abs']
-                
-            evaluated = expr.subs(value_map)
-
+            print(f"[DEBUG] Value map before evaluating {add_var.name}: {value_map}")                
+            evaluated = expr.subs(numerical_value_map)
+            print(f"[DEBUG] Evaluated expression for {add_var.name}: {evaluated}")
             try:
                 numeric_result = round(float(N(evaluated)), 4)
             except TypeError as e:
                 raise
-
+            print(f"[DEBUG] Numeric result for {add_var.name}: {numeric_result}")
             if numeric_result.is_integer():
                 formatted = str(int(numeric_result))
             else:
                 formatted = str(numeric_result)
-
+            print(f"[DEBUG] Formatted result for {add_var.name}: {formatted}")
             value_map[add_var.name] = formatted
-        
+            print(f"[DEBUG] Updated value map with {add_var.name}: {value_map}")    
             used_variable = UsedVariable.objects.create(
                 task=issue.task,
                 issue=issue,
@@ -394,6 +402,7 @@ class StartIssueView(generic.View):
             used_variable.split_sign = add_var.split_sign
             used_variable.save(update_fields=['split_values'])
             used_variables.append(used_variable)
+            print(f"[DEBUG] Evaluated {add_var.name}: {formatted} (raw: {evaluated})")
 
         for used in used_variables:
             split = used.split_map
@@ -414,8 +423,9 @@ class StartIssueView(generic.View):
 
     def build_answer_options(self, answer_options_db, solutions_map, value_map, substitutions):
         answer_options = []
-
+        print("Building answer options with value map:", value_map)
         for opt in answer_options_db:
+            print(f"Building option: {opt.content} with format {opt.display_format}")
             solution = value_map.get(opt.content)
             
             raw_description = opt.content
@@ -428,6 +438,7 @@ class StartIssueView(generic.View):
                 'is_correct': opt.is_correct,
                 'format': opt.display_format
             })
+            print(f"Option: {opt.content}, Evaluated: {rendered_description}, Is Correct: {opt.is_correct}")
         random.shuffle(answer_options)
         return answer_options
     
