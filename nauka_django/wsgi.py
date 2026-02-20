@@ -8,10 +8,15 @@ https://docs.djangoproject.com/en/5.1/howto/deployment/wsgi/
 """
 
 import os
+import sys
 
 from django.core.wsgi import get_wsgi_application
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'nauka_django.settings')
-os.environ['DJANGO_ALLOW_ASYNC_UNSAFE'] = 'true'
+project_home = '/home/romanadamczyk/korepetycje-django-zwyk-e'
+if project_home not in sys.path:
+    sys.path.insert(0, project_home)
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'nauka_django.settings_prod')
+
 
 application = get_wsgi_application()
