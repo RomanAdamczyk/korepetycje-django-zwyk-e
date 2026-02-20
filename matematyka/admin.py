@@ -72,10 +72,10 @@ class VariableAdmin(admin.ModelAdmin):
     list_filter = ['task_id']
 
 class AdditionalVariableAdmin(admin.ModelAdmin):
-    list_display = ['id', 'task__id', 'name', 'formula','split_sign']
+    list_display = ['id', 'task', 'name', 'formula','split_sign']
 
 class UsedVariableAdmin(admin.ModelAdmin):
-    list_display = ['id','task__id','issue_id' ,'variable', 'issue', 'variable_name', 'variable_value','split_values']
+    list_display = ['id','task','issue_id' ,'variable', 'issue', 'variable_name', 'variable_value','split_values']
     search_fields = ['variable__variable_name', 'issue__task__content']
     list_filter = ['task__id','issue']
 
