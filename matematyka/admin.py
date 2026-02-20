@@ -77,10 +77,10 @@ class AdditionalVariableAdmin(admin.ModelAdmin):
 class UsedVariableAdmin(admin.ModelAdmin):
     list_display = ['id','task','issue_id' ,'variable', 'issue', 'variable_name', 'variable_value','split_values']
     search_fields = ['variable__variable_name', 'issue__task__content']
-    list_filter = ['task__id','issue']
+    list_filter = ['task','issue']
 
 class AnswerOptionAdmin(admin.ModelAdmin):
-    list_display = ['id', 'task__id','content', 'is_correct', 'display_format']
+    list_display = ['id', 'task','content', 'is_correct', 'display_format']
     search_fields = ['task__content', 'content']
     list_filter = ['is_correct']
 
