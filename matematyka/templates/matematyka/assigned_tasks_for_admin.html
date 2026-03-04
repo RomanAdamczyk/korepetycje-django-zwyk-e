@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container custom-grid text-black">
+    {% for user, assigned_list in tasks_by_user.items %}
+    <div class="row">
+        <h2>{{ user.username_for_admin|default:user.username }}</h2>
+    </div>
+    <div class="container custom-grid text-black">
+        {% for at in assigned_list %}
+        <div class="row">
+            <div class="col-lg-5">
+                <div class="list-group-item list-group-item-action short-content text-black">
+                    {{ at.task.source }} - {{ at.task.task_level.exam_level }}, {{ at.task.exam_date }}
+                </div>
+            </div>
+            <div class="col-lg-1">
+                <div class="list-group-item list-group-item-action short-content text-black">
+                    zad {{ at.task.sub_number }}
+                </div>
+            </div>
+            <div class="col-lg-1">
+                <div class="list-group-item list-group-item-action short-content text-black">
+                    {{ at.task.points }} pkt
+                </div>
+            </div>
+            <div class="col-lg-2">
+                <div class="list-group-item list-group-item-action short-content text-black">
+                    {{ at.deadline|date:"d.m.Y" }}
+                </div>
+            </div>
+
+            <div class="col-lg-2">
+                <div class="list-group-item list-group-item-action short-content text-black">
+
+                    {% if at.is_completed %}
+                    Tak (rozwiązane)
+                    {% else %}
+                    Nie
+                    {% endif %}
+                </div>
+            </div>
+            <!-- tu później: ile poprawnych oryginalnych / losowych -->
+        </div>
+        {% endfor %}
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

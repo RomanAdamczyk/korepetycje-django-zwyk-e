@@ -3,6 +3,7 @@ from django.views import generic
 from django.template import Template, Context
 from django.contrib.auth import login
 from django.contrib.auth.models import Group
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib import messages
 from django.utils import timezone
 from sympy import sympify, N, Symbol
@@ -10,7 +11,7 @@ from collections import defaultdict
 from django.db.models import Count, OuterRef, Prefetch, When, Case, Value
 from django.conf import settings
 
-from .models import Category, Issue, Task, UsedVariable, AnswerOption, AdditionalVariable, Variable, UserAnswer, Solution, AssignedTask
+from .models import Category, Issue, Task, UsedVariable, AnswerOption, AdditionalVariable, Variable, UserAnswer, Solution, AssignedTask, User
 from .forms import RegisterForm
 from .utils import format_value_map
 
@@ -874,3 +875,25 @@ class AssignedTasksView(generic.ListView):
         context['view_type'] = 'assigned'
 
         return context
+class AssignedTasksForAdminView(LoginRequiredMixin, UserPassesTestMixin, generic.View):
+    login_url = 'login'
+    raise_exception = False
+
+    def test_func(self):
+        return self.request.user.is_staff
+    
+    def get(self, request):
+        users = User.objects.filter(assigned_tasks__isnull=False).order_by('username').distinct()
+        assignedTasks = AssignedTask.objects.filter(
+                user__in=users
+            ).select_related('user', 'task'
+            ).prefetch_related('task__issues__user_answers'
+            ).order_by('user__username', 'deadline')
+        tasks_by_user = defaultdict(list)
+        for at in assignedTasks:
+            tasks_by_user[at.user].append(at)
+        context = {
+            'users': users,
+            'tasks_by_user': dict(tasks_by_user),
+        }
+        return render(request, 'matematyka/assigned_tasks_for_admin.html', context)
