@@ -6,14 +6,15 @@
     <div class="container custom-grid text-black">
         {% for ua in user_answers %}
         <div class="row">
-            <div class="col-lg-5">
+            <div class="col-lg-3">
                 <div class="list-group-item list-group-item-action short-content text-black">
                     {{ ua.answer_date }}
                 </div>
             </div>
             <div class="col-lg-5">
                 <div class="list-group-item list-group-item-action short-content text-black">
-                    {{ ua.issue.task.source }} {{ ua.issue.task.task_level.exam_level }}, {{ ua.issue.task.exam_date }}, zad {{ ua.issue.task.sub_number }}
+                    {{ ua.issue.task.source }} {{ ua.issue.task.task_level.exam_level }}, {{ ua.issue.task.exam_date }},
+                    zad {{ ua.issue.task.sub_number }}
                 </div>
             </div>
             <div class="col-lg-2">
@@ -25,6 +26,15 @@
                     {% endif %}
                     {% if ua.used_hint %}
                     <span class="badge bg-warning text-dark">Podpowiedź</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-lg-2">
+                <div class="list-group-item list-group-item-action short-content text-black">
+                    {% if ua.issue.variable_is_random %}
+                    Losowe
+                    {% else %}
+                    Oryginalne
                     {% endif %}
                 </div>
             </div>
