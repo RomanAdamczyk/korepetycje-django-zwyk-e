@@ -897,3 +897,27 @@ class AssignedTasksForAdminView(LoginRequiredMixin, UserPassesTestMixin, generic
             'tasks_by_user': dict(tasks_by_user),
         }
         return render(request, 'matematyka/assigned_tasks_for_admin.html', context)
+
+class UserActivityForAdminView(LoginRequiredMixin, UserPassesTestMixin, generic.View):
+    login_url = 'login'
+    raise_exception = False
+
+    def test_func(self):
+        return self.request.user.is_staff
+    
+    def get(self, request, user_id):
+        #user_id = self.kwargs['user_id']
+        user = User.objects.get(id=user_id)
+        user_answers = UserAnswer.objects.filter(
+            user__id=user_id
+            ).select_related('issue','issue__task'  # issue aby móc podem przejść do strony z odpowiedzią (odpowiednie zmienne beą pobierane)
+            ).prefetch_related('answer_options'
+            ).order_by('-answer_date')
+
+        for ua in user_answers:
+    # sprawdź, czy choć jedna wybrana opcja jest poprawna
+            ua.is_correct = ua.answer_options.filter(is_correct=True).exists()
+        context = {
+            'user': user,
+            'user_answers': user_answers}
+        return render(request, 'matematyka/user_tasks_for_admin.html', context)

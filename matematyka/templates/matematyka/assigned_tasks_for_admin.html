@@ -4,7 +4,11 @@
 <div class="container custom-grid text-black">
     {% for user, assigned_list in tasks_by_user.items %}
     <div class="row">
-        <h2>{{ user.username_for_admin|default:user.username }}</h2>
+        <a href="{% url 'user_activity_for_admin' user.id %}">{{ user.username_for_admin }}
+
+            <h4> <span class="badge bg-secondary">{{ user.username_for_admin|default:user.username }}
+            </h4></span>
+        </a>
     </div>
     <div class="container custom-grid text-black">
         {% for at in assigned_list %}
@@ -34,9 +38,9 @@
                 <div class="list-group-item list-group-item-action short-content text-black">
 
                     {% if at.is_completed %}
-                    Tak (rozwiązane)
+                    <i class="bi bi-check-circle-fill text-success"></i>
                     {% else %}
-                    Nie
+                    <i class="bi bi-x-circle-fill text-danger"></i>
                     {% endif %}
                 </div>
             </div>

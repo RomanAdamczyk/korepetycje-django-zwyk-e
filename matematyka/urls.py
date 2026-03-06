@@ -17,5 +17,6 @@ urlpatterns = [
     path('tasks/<int:task_id>/answer/result/', views.AnswerResultView.as_view(), name='answer_result'),
     path('tasks/<int:task_id>/answer/result/solution', views.GetSolutionView.as_view(), name='get_solution'),
     path('tasks/assigned/', views.AssignedTasksView.as_view(), name='assigned_tasks'),
-    path('tasks/assigned/admin/', views.AssignedTasksForAdminView.as_view(), name='assigned_tasks_admin'),
+    path('admin/tasks/assigned/', views.AssignedTasksForAdminView.as_view(), name='assigned_tasks_admin'),
+    path('admin/users/<int:user_id>/tasks/', views.UserActivityForAdminView.as_view(), name='user_activity_for_admin'),
 ]

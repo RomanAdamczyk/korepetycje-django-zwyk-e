@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container custom-grid text-black">
+    <span class="badge bg-secondary">{{ user.username_for_admin|default:user.username }}</span>
+    <div class="container custom-grid text-black">
+        {% for ua in user_answers %}
+        <div class="row">
+            <div class="col-lg-5">
+                <div class="list-group-item list-group-item-action short-content text-black">
+                    {{ ua.answer_date }}
+                </div>
+            </div>
+            <div class="col-lg-5">
+                <div class="list-group-item list-group-item-action short-content text-black">
+                    {{ ua.issue.task.source }} {{ ua.issue.task.task_level.exam_level }}, {{ ua.issue.task.exam_date }}
+                </div>
+            </div>
+            <div class="col-lg-2">
+                <div class="list-group-item list-group-item-action short-content text-black">
+                    {% if ua.is_correct %}
+                    <i class="bi bi-check-circle-fill text-success"></i>
+                    {% else %}
+                    <i class="bi bi-x-circle-fill text-danger"></i>
+                    {% endif %}
+                    {% if ua.used_hint %}
+                    <span class="badge bg-warning text-dark">Podpowiedź</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
