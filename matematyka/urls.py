@@ -19,4 +19,5 @@ urlpatterns = [
     path('tasks/assigned/', views.AssignedTasksView.as_view(), name='assigned_tasks'),
     path('admin/tasks/assigned/', views.AssignedTasksForAdminView.as_view(), name='assigned_tasks_admin'),
     path('admin/users/<int:user_id>/tasks/', views.UserActivityForAdminView.as_view(), name='user_activity_for_admin'),
+    path('task/history/', views.UserHistoryView.as_view(), name='task_history'),
 ]

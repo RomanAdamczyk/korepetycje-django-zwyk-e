@@ -49,7 +49,7 @@
                         <li class="nav-item"><a class="nav-link" href="{% url 'category_list' %}">Kategorie</a></li>
                         <li class="nav-item"><a class="nav-link" href="{% url 'exam_list' %}">Matury</a></li>
                         <li class="nav-item"><a class="nav-link" href="{% url 'assigned_tasks'%}">Zadane</a></li>
-                        <li class="nav-item"><a class="nav-link" href="#">Historia</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{% url 'task_history' %}">Historia</a></li>
                         {% if user.is_authenticated and user.is_staff %}
                         <li class="nav-item"><a class="nav-link" href="{% url 'assigned_tasks_admin' %}">Zadane
                                 uczniom</a></li>

@@ -920,3 +920,20 @@ class UserActivityForAdminView(LoginRequiredMixin, UserPassesTestMixin, generic.
             'student': user,
             'user_answers': user_answers}
         return render(request, 'matematyka/user_tasks_for_admin.html', context)
+
+class UserHistoryView(LoginRequiredMixin, generic.View):
+    login_url = 'login'
+
+    def get(self, request):
+        user = request.user
+        user_answers = UserAnswer.objects.filter(
+            user=user
+            ).select_related('issue','issue__task'
+            ).prefetch_related('answer_options'
+            ).order_by('-answer_date')
+        for ua in user_answers:
+            ua.is_correct = ua.answer_options.filter(is_correct=True).exists()
+        context = {
+            'student': user,
+            'user_answers': user_answers}
+        return render(request, 'matematyka/user_tasks_for_admin.html', context)
