@@ -937,3 +937,74 @@ class UserHistoryView(LoginRequiredMixin, generic.View):
             'student': user,
             'user_answers': user_answers}
         return render(request, 'matematyka/user_tasks_for_admin.html', context)
+    
+class AnswerHistoryForAdminView(LoginRequiredMixin, UserPassesTestMixin, generic.View):
+    login_url = 'login'
+    raise_exception = False
+
+    def test_func(self):
+        return self.request.user.is_staff
+    
+    def get(self, request, issue_id):
+        try:
+            issue = Issue.objects.select_related(
+                'task__task_level',
+                'task__source',
+                'task__task_type'
+                ).prefetch_related(
+                'task__category',
+                'user_answers',
+                'user_answers__answer_options',
+                'used_variables'
+                ).get(id=issue_id)
+            
+        except Issue.DoesNotExist:
+            return render(request, 'matematyka/issue.html', {'error': 'Brak aktywnego zadania'})
+
+        user_answer = issue.user_answers.first()
+        selected_option = user_answer.answer_options.first()
+        correct_answer = AnswerOption.objects.filter(task=issue.task, is_correct=True).first()
+        is_correct = selected_option.is_correct
+        task = issue.task
+        exam_info = {
+            'number': task.sub_number,
+            'level': task.task_level.exam_level if task.task_level else 'Nieznany',
+            'date': task.exam_date,
+            'source': task.source.name if task.source else 'Nieznane',
+            'categories': [cat.name for cat in task.category.all()]}        
+        used_variables = list(UsedVariable.objects.filter(issue=issue))
+        value_map = {var.variable_name: var.variable_value for var in used_variables}
+
+        for used in used_variables:
+            split = used.split_map
+
+            if split:
+                value_map[f"{used.variable_name}_sign"] = split['sign']
+                value_map[f"{used.variable_name}_abs"] = split['abs']    
+
+        value_map = format_value_map(value_map)
+        numeric_value_map = {k: v for k, v in value_map.items() if not k.endswith('_sign') and not k.endswith('_abs')}
+        symbols = {name: Symbol(name) for name in numeric_value_map}
+        substitutions = {
+            symbols[k]: int(float(v)) if float(v).is_integer() else float(v)
+            for k, v in numeric_value_map.items()
+        }
+
+        answer_options_db = AnswerOption.objects.filter(task=task)
+        answers_instance = StartIssueView()
+        answer_options = answers_instance.build_answer_options(answer_options_db, symbols, value_map, substitutions)
+
+        raw_description = task.content
+        template = Template(raw_description)
+        rendered_description = template.render(Context(value_map))
+
+        return render(request, 'matematyka/answer.html', {
+            'issue': issue,
+            'task': task,
+            'selected_option': selected_option,
+            'correct_answer': correct_answer,
+            'is_correct': is_correct,
+            'description': rendered_description,
+            'answer_options': answer_options,
+            'exam_info': exam_info,            
+        })

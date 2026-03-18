@@ -13,8 +13,11 @@
             </div>
             <div class="col-lg-5">
                 <div class="list-group-item list-group-item-action short-content text-black">
-                    {{ ua.issue.task.source }} {{ ua.issue.task.task_level.exam_level }}, {{ ua.issue.task.exam_date }},
-                    zad {{ ua.issue.task.sub_number }}
+                    <a href="{% url 'task_activity_for_admin' issue_id=ua.issue.id %}" class="text-body">
+                        {{ ua.issue.task.source }} {{ ua.issue.task.task_level.exam_level }},
+                        {{ ua.issue.task.exam_date }},
+                        zad {{ ua.issue.task.sub_number }}
+                    </a>
                 </div>
             </div>
             <div class="col-lg-2">
