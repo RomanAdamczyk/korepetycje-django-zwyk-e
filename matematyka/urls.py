@@ -22,4 +22,5 @@ urlpatterns = [
     path('admin/tasks/<int:issue_id>/activity/', views.AnswerHistoryForAdminView.as_view(), name='task_activity_for_admin'),
     path('task/history/', views.UserHistoryView.as_view(), name='task_history'),
     path('task/<int:issue_id>/history/', views.UserIssueHistoryView.as_view(), name='user_issue_history'),
+    path('admin/active-users/', views.ActiveUsersForAdminView.as_view(), name='active_users'),
 ]

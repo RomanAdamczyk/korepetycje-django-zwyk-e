@@ -1079,3 +1079,17 @@ class UserIssueHistoryView(LoginRequiredMixin, generic.View):
             'answer_options': answer_options,
             'exam_info': exam_info,            
         })
+
+class ActiveUsersForAdminView(LoginRequiredMixin, UserPassesTestMixin, generic.View):
+    login_url = 'login'
+    raise_exception = False
+
+    def test_func(self):
+        return self.request.user.is_staff
+    
+    def get(self, request):
+        active_users = User.objects.filter(is_active=True).distinct()
+        context = {
+            'active_users': active_users
+        }
+        return render(request, 'matematyka/active_users.html', context)
