@@ -93,7 +93,10 @@ class Task(models.Model):
         source (str): The source of the task (eg. CKE, Operon)
         hint (str): A hint for the task.
         sub_number (str): task number on the exam.
-        task_type (TaskType): The type of the answers for the task.'''
+        task_type (TaskType): The type of the answers for the task.
+        pieces (list): A list of pieces for piecewise functions.
+        x_min (float): The minimum x value for plotting the function.
+        x_max (float): The maximum x value for plotting the function.'''
     
     content = models.TextField()
     points = models.IntegerField(null=True, blank=True)
@@ -105,6 +108,9 @@ class Task(models.Model):
     hint = models.TextField(null=True, blank=True)
     sub_number = models.CharField(max_length=10, null=True, blank=True)
     task_type = models.ForeignKey(TaskType, on_delete=models.SET_NULL, null=True, blank=True, related_name='tasks')
+    pieces = models.JSONField(null=True, blank=True, help_text="Lista kawałków funkcji do wykresu")
+    x_min = models.FloatField(null=True, blank=True, help_text="Lewy zakres osi X")
+    x_max = models.FloatField(null=True, blank=True, help_text="Prawy zakres osi X")
 
     def __str__(self):
         return f"id {self.id} - {self.content}"
