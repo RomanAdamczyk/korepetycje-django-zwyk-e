@@ -14,9 +14,13 @@ from django.conf import settings
 from .models import Category, Issue, Task, UsedVariable, AnswerOption, AdditionalVariable, Variable, UserAnswer, Solution, AssignedTask, User
 from .forms import RegisterForm
 from .utils import format_value_map
+from .services.plot_generator import generate_function_plot
 
 import numpy as np
 import random
+import logging
+
+logger = logging.getLogger(__name__)
 
 def prime_factorization(number):
     """Returns the prime factorization of a number as a list."""
@@ -347,12 +351,18 @@ class StartIssueView(generic.View):
         raw_description = task.content
         template = Template(raw_description)
         rendered_description = template.render(Context(value_map))
+
+        plot = None
+        if task.pieces:
+            plot = self.get_plot_for_task(task)
+
         context = {
             'issue': issue,
             'variables': value_map,
             'answer_options': answer_options,
             'description': rendered_description,
             'exam_info': exam_info,
+            'plot': plot,
             }
        
         return render(request, 'matematyka/issue.html', context=context)
@@ -432,6 +442,29 @@ class StartIssueView(generic.View):
         random.shuffle(answer_options)
         return answer_options
     
+    def get_plot_for_task(self, task):
+        """
+        Returns base64 encoded plot for the task or None if no plot is defined.
+        """
+        print(f"Generating plot for task {task.id} with pieces: {task.pieces}")
+        if not task.pieces:
+            return None
+        try:
+            x_min = getattr(task, 'x_min')
+            if x_min is None:
+                raise ValueError(f"x_min is not defined for task {task.id}")
+            x_max = getattr(task, 'x_max')
+            if x_max is None:
+                raise ValueError(f"x_max is not defined for task {task.id}")
+            return generate_function_plot(
+                pieces=task.pieces,
+                x_range=(x_min, x_max)
+            )
+        except Exception as e:
+            logger.error(f"Error generating plot for task {task.id}: {e}", exc_info=True)
+            return None
+
+
     def randomize_variables(self, task):
         variables = Variable.objects.filter(task=task)
         choices_dict= {}

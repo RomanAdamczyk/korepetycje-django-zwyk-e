@@ -3,51 +3,54 @@
 
 {% block content %}
 <div class="alert alert-dark mb-3">
-    {{ exam_info.level }} {{ exam_info.date|date:"d.m.Y" }} ({{ exam_info.source }}) - Zad. {{ exam_info.number }} - 
+    {{ exam_info.level }} {{ exam_info.date|date:"d.m.Y" }} ({{ exam_info.source }}) - Zad. {{ exam_info.number }} -
     Kategorie: {{ exam_info.categories|join:", " }}
 </div>
 <div class="task-content">
     {{description|safe}}
+    {% if plot %}
+    <div style="margin: 20px 0; text-align: center;">
+        <img src="{{ plot }}" alt="Wykres funkcji" style="max-width: 50%; height: auto;">
+        {% endif %}
 
 
+        <form method="post" action="{% url 'answer'  task_id=issue.task.id %}">
+            {% csrf_token %}
 
-    <form method="post" action="{% url 'answer'  task_id=issue.task.id %}">
-        {% csrf_token %}
-
-        <div class="row row-cols-1 row-cols-md-2 g-3">
-            {% for answer in answer_options %}
-            <div class="col">
-                <input type="radio" class="btn-check" name="answer" id="answer{{ forloop.counter }}"
-                    value="{{ answer.id }}" required>
-                <label class="btn btn-outline-custom w-100 p-3 text-start" for="answer{{ forloop.counter }}">
-                    {% if answer.format == 'symbolic' %}
-                    <span class="math-render">$$ {{ answer.content | safe }} $$</span>
-                    {% elif answer.format == 'numeric' %}
-                    <span class="math-render">{{ answer.content }}</span>
-                    {% elif answer.format == 'text' %}
-                    <span class="plain-text">{{ answer.content | safe }}</span>
-                    {% else %}
-                    <span class="plain-text">{{ answer.content | safe }}</span>
-                    <!-- Fallback pokazuje surowy content -->
-                    {% endif %}
-                </label>
+            <div class="row row-cols-1 row-cols-md-2 g-3">
+                {% for answer in answer_options %}
+                <div class="col">
+                    <input type="radio" class="btn-check" name="answer" id="answer{{ forloop.counter }}"
+                        value="{{ answer.id }}" required>
+                    <label class="btn btn-outline-custom w-100 p-3 text-start" for="answer{{ forloop.counter }}">
+                        {% if answer.format == 'symbolic' %}
+                        <span class="math-render">$$ {{ answer.content | safe }} $$</span>
+                        {% elif answer.format == 'numeric' %}
+                        <span class="math-render">{{ answer.content }}</span>
+                        {% elif answer.format == 'text' %}
+                        <span class="plain-text">{{ answer.content | safe }}</span>
+                        {% else %}
+                        <span class="plain-text">{{ answer.content | safe }}</span>
+                        <!-- Fallback pokazuje surowy content -->
+                        {% endif %}
+                    </label>
+                </div>
+                {% endfor %}
             </div>
-            {% endfor %}
-        </div>
-        <div class="mt-4">
-            <button type="submit" class="btn btn-success">Zatwierdź</button>
-        </div>
-    </form>
+            <div class="mt-4">
+                <button type="submit" class="btn btn-success">Zatwierdź</button>
+            </div>
+        </form>
 
-    <button class="btn btn-warning" type="button" data-bs-toggle="collapse" data-bs-target="#hintBox"
-        hx-get="{% url 'get_hint' issue.task.id %}" hx-target="#hintBox" hx-swap="innerHTML">
-        Pokaż wskazówkę
-    </button>
-</div>
-<div class="collapse mt-3" id="hintBox">
+        <button class="btn btn-warning" type="button" data-bs-toggle="collapse" data-bs-target="#hintBox"
+            hx-get="{% url 'get_hint' issue.task.id %}" hx-target="#hintBox" hx-swap="innerHTML">
+            Pokaż wskazówkę
+        </button>
+    </div>
+    <div class="collapse mt-3" id="hintBox">
 
-</div>
+    </div>
 
 
 
-{% endblock %}
+    {% endblock %}
