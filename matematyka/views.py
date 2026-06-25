@@ -446,7 +446,6 @@ class StartIssueView(generic.View):
         """
         Returns base64 encoded plot for the task or None if no plot is defined.
         """
-        print(f"Generating plot for task {task.id} with pieces: {task.pieces}")
         if not task.pieces:
             return None
         try:
