@@ -307,7 +307,6 @@ class AssignedTask(models.Model):
 
         return has_completion
 
-
 class Solution(models.Model):
     '''
     Model representing a solution to a task.
@@ -321,3 +320,49 @@ class Solution(models.Model):
 
     def __str__(self):
         return f"Solution for Task {self.task.id}: {self.content[:30]}..."
+    
+class ExpectedAnswer(models.Model):
+    """
+    Represents one expected answer / blank in an open-ended task.
+    One Task can have multiple ExpectedAnswer objects.
+    """
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='expected_answers')
+    order = models.PositiveIntegerField(default=1, help_text="Kolejność luki w zadaniu")
+    content = models.TextField(
+        help_text="Tekst luki widoczny dla ucznia (np. 'Rozwiązaniem równania f(x)=3 jest liczba ......')"
+    )
+    instruction = models.TextField(
+        null=True, 
+        blank=True, 
+        help_text="Dodatkowa instrukcja dla tej konkretnej luki (opcjonalnie)"
+    )
+    answer_type = models.CharField(
+        max_length=30,
+        choices=[
+            ('numeric', 'Liczba'),
+            ('expression', 'Wyrażenie matematyczne'),
+            ('set', 'Zbiór / Dziedzina / Przedział'),
+            ('text', 'Tekst'),
+        ],
+        default='numeric',
+        help_text="Typ oczekiwanej odpowiedzi"
+    )
+    correct_value = models.CharField(
+        max_length=400, 
+        help_text="Poprawna odpowiedź (np. '5', 'R \\ {0}', '[0, +∞)', 'x**2 + 1')"
+    )
+    validation_rules = models.JSONField(
+        null=True, 
+        blank=True, 
+        help_text="Dodatkowe reguły walidacji specyficzne dla tego zadania"
+    )
+    points = models.FloatField(default=1.0, help_text="Ile punktów za poprawną odpowiedź na tę lukę")
+    class Meta:
+        ordering = ['order']
+        unique_together = ('task', 'order')
+        verbose_name = "Expected Answer"
+        verbose_name_plural = "Expected Answers"
+
+    def __str__(self):
+        return f"Answer #{self.order} for Task {self.task.id}"
+
