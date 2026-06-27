@@ -349,7 +349,7 @@ class ExpectedAnswer(models.Model):
     )
     correct_value = models.CharField(
         max_length=400, 
-        help_text="Poprawna odpowiedź (np. '5', 'R \\ {0}', '[0, +∞)', 'x**2 + 1')"
+        help_text="Poprawna odpowiedź (np. '5', 'R \\ {0}', '[0; +∞)', 'x**2 + 1')"
     )
     validation_rules = models.JSONField(
         null=True, 

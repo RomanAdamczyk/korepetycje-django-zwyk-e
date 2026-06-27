@@ -1,5 +1,5 @@
 from django.contrib import admin
-from matematyka.models import Category, TaskGroup, TaskLevel, Task, Issue, UserProfile, AssignedTask, Variable, UsedVariable, AnswerOption, UserAnswer, TaskType, AdditionalVariable, Source, Solution
+from matematyka.models import Category, TaskGroup, TaskLevel, Task, Issue, UserProfile, AssignedTask, Variable, UsedVariable, AnswerOption, UserAnswer, TaskType, AdditionalVariable, Source, Solution, ExpectedAnswer
 
 class CategoryAdmin(admin.ModelAdmin):
     list_display = ['id', 'name']
@@ -108,7 +108,11 @@ class SolutionAdmin(admin.ModelAdmin):
     search_fields = ['task']
     list_filter = ['task']
 
-
+class ExpectedAnswerAdmin(admin.ModelAdmin):
+    list_display = ['id', 'task_id', 'content', 'instruction', 'answer_type', 'validation_rules', 'order', 'correct_value', 'points'] 
+    search_fields = ['task']
+    list_filter = ['task']
+    
 admin.site.register(Category, CategoryAdmin)
 admin.site.register(TaskGroup, TaskGroupAdmin) 
 admin.site.register(TaskLevel, TaskLevelAdmin)
@@ -124,3 +128,4 @@ admin.site.register(AnswerOption, AnswerOptionAdmin)
 admin.site.register(UserAnswer, UserAnswerAdmin)
 admin.site.register(TaskType, TaskTypeAdmin)
 admin.site.register(Solution, SolutionAdmin)
+admin.site.register(ExpectedAnswer, ExpectedAnswerAdmin)
