@@ -258,6 +258,7 @@ class StartIssueView(generic.View):
     """
     def get(self, request, task_id):
         issue = None
+        answer_options = None
         task = Task.objects.select_related('task_level', 'source', 'task_type').prefetch_related(
                     'category').get(id=task_id)
         exam_info = {
@@ -289,8 +290,9 @@ class StartIssueView(generic.View):
                         symbols[k]: int(float(v)) if float(v).is_integer() else float(v)
                         for k, v in numerical_value_map.items()
                     }
-                    answer_options_db = AnswerOption.objects.filter(task=task)
-                    answer_options = self.build_answer_options(answer_options_db, symbols, value_map, substitutions)
+                    if task.task_type.name == 'ABCD1':
+                        answer_options_db = AnswerOption.objects.filter(task=task)
+                        answer_options = self.build_answer_options(answer_options_db, symbols, value_map, substitutions)
             except Issue.DoesNotExist:
                 pass
 
@@ -305,8 +307,7 @@ class StartIssueView(generic.View):
                 variables = Variable.objects.filter(task=task)
 
             additional_variables = AdditionalVariable.objects.filter(task=task)
-            answer_options_db = AnswerOption.objects.filter(task=task)
-
+            
             value_map = {}
             used_variables = []
             for variable in variables:
@@ -345,8 +346,10 @@ class StartIssueView(generic.View):
             substitutions = {
                 symbols[k]: int(float(v)) if float(v).is_integer() else float(v)
                 for k, v in numerical_value_map.items()
-            }    
-            answer_options = self.build_answer_options(answer_options_db, solutions_map, value_map, substitutions)
+            }
+            if task.task_type.name == 'ABCD1':    
+                answer_options_db = AnswerOption.objects.filter(task=task)
+                answer_options = self.build_answer_options(answer_options_db, solutions_map, value_map, substitutions)
 
         raw_description = task.content
         template = Template(raw_description)
