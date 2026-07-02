@@ -11,7 +11,8 @@ from collections import defaultdict
 from django.db.models import Count, OuterRef, Prefetch, When, Case, Value
 from django.conf import settings
 
-from .models import Category, Issue, Task, UsedVariable, AnswerOption, AdditionalVariable, Variable, UserAnswer, Solution, AssignedTask, User
+from .models import Category, Issue, Task, UsedVariable, AnswerOption, AdditionalVariable, Variable,  Solution, AssignedTask, User
+from. models import TaskBlank, UserAnswer
 from .forms import RegisterForm
 from .utils import format_value_map
 from .services.plot_generator import generate_function_plot
@@ -259,6 +260,7 @@ class StartIssueView(generic.View):
     def get(self, request, task_id):
         issue = None
         answer_options = None
+        subtasks = []
         task = Task.objects.select_related('task_level', 'source', 'task_type').prefetch_related(
                     'category').get(id=task_id)
         exam_info = {
@@ -293,6 +295,14 @@ class StartIssueView(generic.View):
                     if task.task_type.name == 'ABCD1':
                         answer_options_db = AnswerOption.objects.filter(task=task)
                         answer_options = self.build_answer_options(answer_options_db, symbols, value_map, substitutions)
+                    elif task.task_type.name == 'uzupełnij':
+                        task_blanks = TaskBlank.objects.filter(task=task)
+                        for blank in task_blanks:
+                            raw_content = blank.content
+                            template = Template(raw_content)
+                            rendered_content = template.render(Context(value_map))
+                            blank.content = rendered_content
+                            subtasks.append(blank)
             except Issue.DoesNotExist:
                 pass
 
@@ -350,6 +360,14 @@ class StartIssueView(generic.View):
             if task.task_type.name == 'ABCD1':    
                 answer_options_db = AnswerOption.objects.filter(task=task)
                 answer_options = self.build_answer_options(answer_options_db, solutions_map, value_map, substitutions)
+            elif task.task_type.name == 'uzupełnij':
+                task_blanks = TaskBlank.objects.filter(task=task)
+                for blank in task_blanks:
+                    raw_content = blank.content
+                    template = Template(raw_content)
+                    rendered_content = template.render(Context(value_map))
+                    blank.content = rendered_content
+                    subtasks.append(blank)
 
         raw_description = task.content
         template = Template(raw_description)
@@ -366,6 +384,7 @@ class StartIssueView(generic.View):
             'description': rendered_description,
             'exam_info': exam_info,
             'plot': plot,
+            'subtasks': subtasks
             }
        
         return render(request, 'matematyka/issue.html', context=context)
@@ -568,13 +587,23 @@ class GetSolutionView(generic.View):
 
 class SubmitAnswerView(generic.View):
     def post(self, request, task_id):
+        task = Task.objects.get(id=task_id)
 
-        selected_answer_id = request.POST.get('answer')
         request.session['submitted_issue_id'] = request.session.pop('issue_id', None)
-        request.session['selected_answer_id'] = selected_answer_id
 
-        return redirect('answer_result', task_id=task_id)
-    
+        if task.task_type.name == 'ABCD1':
+            selected_answer_id = request.POST.get('answer')
+            request.session['selected_answer_id'] = selected_answer_id
+        
+        elif task.task_type.name == 'uzupełnij':
+            user_answers = {}
+            for key, value in request.POST.items():
+                if key.startswith('answer_'):
+                    answer_id = int(key.split('_')[1])
+                    user_answers[answer_id] = value
+            request.session["submitted_answers"] = user_answers
+
+        return redirect('answer_result', task_id=task_id)    
 
 class AnswerResultView(generic.View):
     def get(self, request, task_id):
@@ -586,6 +615,7 @@ class AnswerResultView(generic.View):
             return render(request, 'matematyka/issue.html', {'error': 'Brak aktywnego zadania'})
         
         task = issue.task
+        task_type = task.task_type.name if task.task_type else None     
         exam_info = {
             'number': task.sub_number,
             'level': task.task_level.exam_level if task.task_level else 'Nieznany',
@@ -602,25 +632,45 @@ class AnswerResultView(generic.View):
         if created:
             user_answer.used_hint = False
 
-        selected_answer_id = request.session.get('selected_answer_id')
-        if selected_answer_id:
-            try:
-                selected_option = AnswerOption.objects.get(id=selected_answer_id)
-                user_answer.answer_date = timezone.now()
-                user_answer.save()
-                user_answer.answer_options.set([selected_option])
-            except AnswerOption.DoesNotExist:
+        if task_type == 'ABCD1':
+            selected_answer_id = request.session.get('selected_answer_id')
+            if selected_answer_id:
+                try:
+                    selected_option = AnswerOption.objects.get(id=selected_answer_id)
+                    user_answer.answer_date = timezone.now()
+                    user_answer.save()
+                    user_answer.answer_options.set([selected_option])
+                except AnswerOption.DoesNotExist:
+                    return render(request, 'matematyka/issue.html', {
+                        'issue': issue,
+                        'task': task,
+                        'error': 'Wybrana odpowiedź nie istnieje!'
+                    })
+            else:
                 return render(request, 'matematyka/issue.html', {
                     'issue': issue,
                     'task': task,
-                    'error': 'Wybrana odpowiedź nie istnieje!'
+                    'error': 'Musisz zaznaczyć odpowiedź przed wysłaniem!'
+                })            
+        elif task_type == 'uzupełnij':
+            submitted_answers = request.session.get("submitted_answers", {})
+            if not submitted_answers:
+                return render(request, 'matematyka/issue.html', {
+                    'issue': issue,
+                    'task': task,
+                    'error': 'Musisz wypełnić wszystkie pola przed wysłaniem!'
                 })
-        else:
-            return render(request, 'matematyka/issue.html', {
-                'issue': issue,
-                'task': task,
-                'error': 'Musisz zaznaczyć odpowiedź przed wysłaniem!'
-            })            
+            user_answer.answer_date = timezone.now()
+            user_answer.save()
+            answer_options = AnswerOption.objects.filter(task=task)
+            for answer in answer_options:
+                if answer.id in submitted_answers:
+                    user_answer.answer_options.add(answer)
+                    user_answer.save()
+                    user_answer.answer_options.through.objects.filter(
+                        useranswer=user_answer, answeroption=answer
+                    ).update(user_input=submitted_answers[answer.id])
+                
         correct_answer = AnswerOption.objects.filter(task=task, is_correct=True).first()
         is_correct = selected_option == correct_answer
 

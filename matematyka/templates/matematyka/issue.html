@@ -43,6 +43,23 @@
         </div>
     </form>
 
+    {% elif issue.task.task_type.name == "uzupełnij" %}
+
+    <form method="post" action="{% url 'answer'  task_id=issue.task.id %}">
+        {% csrf_token %}
+        <div class="task-content">
+            {% for blank in subtasks %}
+            <div class="row">
+                <div class="col-md-1" style="text-align: right;"> {{ blank.order }}. </div>
+                 <div class="col-md-6">   {{ blank.content|safe }}</div>
+                <div class="col-md-2">
+                    <input type="text" class="form-control mb-3" name="answer_{{ blank.order }}"  title="{{ blank.instruction|safe }}" required>
+                </div>
+            </div>
+            {% endfor %}
+            <button type="submit" class="btn btn-success">Zatwierdź</button>
+    </form>
+
     {% endif %}
 
     <button class="btn btn-warning" type="button" data-bs-toggle="collapse" data-bs-target="#hintBox"

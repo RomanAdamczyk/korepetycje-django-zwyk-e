@@ -321,21 +321,15 @@ class Solution(models.Model):
     def __str__(self):
         return f"Solution for Task {self.task.id}: {self.content[:30]}..."
     
-class ExpectedAnswer(models.Model):
+class TaskBlank(models.Model):
     """
-    Represents one expected answer / blank in an open-ended task.
-    One Task can have multiple ExpectedAnswer objects.
+    Represents one task blank in an open-ended task.
+    One Task can have multiple TaskBlank objects.
     """
-    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='expected_answers')
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='task_blanks')
     order = models.PositiveIntegerField(default=1, help_text="Kolejność luki w zadaniu")
-    content = models.TextField(
-        help_text="Tekst luki widoczny dla ucznia (np. 'Rozwiązaniem równania f(x)=3 jest liczba ......')"
-    )
-    instruction = models.TextField(
-        null=True, 
-        blank=True, 
-        help_text="Dodatkowa instrukcja dla tej konkretnej luki (opcjonalnie)"
-    )
+    content = models.TextField(help_text="Tekst luki widoczny dla ucznia (np. 'Rozwiązaniem równania f(x)=3 jest liczba ......')")
+    instruction = models.TextField(null=True,blank=True,help_text="Dodatkowa instrukcja dla tej konkretnej luki (opcjonalnie)")
     answer_type = models.CharField(
         max_length=30,
         choices=[
@@ -360,9 +354,23 @@ class ExpectedAnswer(models.Model):
     class Meta:
         ordering = ['order']
         unique_together = ('task', 'order')
-        verbose_name = "Expected Answer"
-        verbose_name_plural = "Expected Answers"
+        verbose_name = "Task Blank"
+        verbose_name_plural = "Task Blanks"
 
     def __str__(self):
-        return f"Answer #{self.order} for Task {self.task.id}"
+        return f"Blank #{self.order} for Task {self.task.id}"
 
+class UserBlankAnswer(models.Model):
+    user_answer = models.ForeignKey(UserAnswer, on_delete=models.CASCADE, related_name='open_answers')
+    expected_answer = models.ForeignKey('TaskBlank', on_delete=models.CASCADE)
+    user_input = models.TextField()
+    is_correct = models.BooleanField(default=False)
+    points_earned = models.FloatField(default=0)
+    answer_date = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user_answer', 'expected_answer')
+        ordering = ['expected_answer']
+
+    def __str__(self):
+        return f"expected answer {self.expected_answer.order} - User {self.user_answer.user}"

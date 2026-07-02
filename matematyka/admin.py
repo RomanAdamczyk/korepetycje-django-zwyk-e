@@ -1,6 +1,6 @@
 from django.contrib import admin
-from matematyka.models import Category, TaskGroup, TaskLevel, Task, Issue, UserProfile, AssignedTask, Variable, UsedVariable, AnswerOption, UserAnswer, TaskType, AdditionalVariable, Source, Solution, ExpectedAnswer
-
+from matematyka.models import Category, TaskGroup, TaskLevel, Task, Issue, UserProfile, AssignedTask, Variable, UsedVariable, AnswerOption, UserAnswer, TaskType, AdditionalVariable, Source, Solution, TaskBlank
+from matematyka.models import UserBlankAnswer
 class CategoryAdmin(admin.ModelAdmin):
     list_display = ['id', 'name']
     search_fields = ['name']
@@ -108,10 +108,15 @@ class SolutionAdmin(admin.ModelAdmin):
     search_fields = ['task']
     list_filter = ['task']
 
-class ExpectedAnswerAdmin(admin.ModelAdmin):
+class TaskBlankAdmin(admin.ModelAdmin):
     list_display = ['id', 'task_id', 'content', 'instruction', 'answer_type', 'validation_rules', 'order', 'correct_value', 'points'] 
     search_fields = ['task']
     list_filter = ['task']
+
+class UserBlankAnswerAdmin(admin.ModelAdmin):
+    list_display = ['id', 'user', 'task_blank', 'answer_value', 'is_correct', 'submitted_at'] 
+    search_fields = ['user__username', 'task_blank__content']
+    list_filter = ['is_correct', 'submitted_at']
     
 admin.site.register(Category, CategoryAdmin)
 admin.site.register(TaskGroup, TaskGroupAdmin) 
@@ -128,4 +133,5 @@ admin.site.register(AnswerOption, AnswerOptionAdmin)
 admin.site.register(UserAnswer, UserAnswerAdmin)
 admin.site.register(TaskType, TaskTypeAdmin)
 admin.site.register(Solution, SolutionAdmin)
-admin.site.register(ExpectedAnswer, ExpectedAnswerAdmin)
+admin.site.register(TaskBlank, TaskBlankAdmin)
+admin.site.register(UserBlankAnswer, UserBlankAnswerAdmin)
