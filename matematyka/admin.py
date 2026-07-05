@@ -114,9 +114,9 @@ class TaskBlankAdmin(admin.ModelAdmin):
     list_filter = ['task']
 
 class UserBlankAnswerAdmin(admin.ModelAdmin):
-    list_display = ['id', 'user', 'task_blank', 'answer_value', 'is_correct', 'submitted_at'] 
-    search_fields = ['user__username', 'task_blank__content']
-    list_filter = ['is_correct', 'submitted_at']
+    list_display = ['id', 'user_answer', 'expected_answer', 'user_input', 'is_correct', 'answer_date'] 
+    search_fields = ['user_answer__username', 'expected_answer__content']
+    list_filter = ['is_correct', 'answer_date']
     
 admin.site.register(Category, CategoryAdmin)
 admin.site.register(TaskGroup, TaskGroupAdmin) 
