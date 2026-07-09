@@ -366,7 +366,6 @@ class UserBlankAnswer(models.Model):
     user_input = models.TextField()
     is_correct = models.BooleanField(default=False)
     points_earned = models.FloatField(default=0)
-    answer_date = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         unique_together = ('user_answer', 'expected_answer')

@@ -12,7 +12,7 @@ from django.db.models import Count, OuterRef, Prefetch, When, Case, Value
 from django.conf import settings
 
 from .models import Category, Issue, Task, UsedVariable, AnswerOption, AdditionalVariable, Variable,  Solution, AssignedTask, User
-from. models import TaskBlank, UserAnswer
+from. models import TaskBlank, UserAnswer, UserBlankAnswer
 from .forms import RegisterForm
 from .utils import format_value_map
 from .services.plot_generator import generate_function_plot
@@ -635,14 +635,25 @@ class SubmitAnswerView(generic.View):
                     assigned_task.save()
 
 
-            elif task.task_type.name == 'uzupełnij':
-                user_answers = {}
-                for key, value in request.POST.items():
-                    if key.startswith('answer_'):
-                        answer_id = int(key.split('_')[1])
-                        user_answers[answer_id] = value
-                request.session["submitted_answers"] = user_answers
+        elif task.task_type.name == 'uzupełnij':
+            submitted_answers = {}
+            for key, value in request.POST.items():
+                if key.startswith('answer_'):
+                    order = int(key.split('_')[1])
+                    submitted_answers[order] = value.strip()
+                    
+            blanks = TaskBlank.objects.filter(task=task).order_by('order')
 
+            for blank in blanks:
+                user_input = submitted_answers.get(blank.order)
+
+                if user_input is not None:
+                    UserBlankAnswer.objects.create(           
+                        user_answer=user_answer,
+                        user_input=user_input,
+                        expected_answer=blank
+                    )
+            request.session['submitted_answers'] = submitted_answers
         return redirect('answer_result', task_id=task_id)    
 
 class AnswerResultView(generic.View):
@@ -700,6 +711,19 @@ class AnswerResultView(generic.View):
             answers_instance = StartIssueView()
             answer_options = answers_instance.build_answer_options(answer_options_db, symbols, value_map, substitutions)
 
+        elif task_type == 'uzupełnij':
+            submitted_answers = request.session.get('submitted_answers', {})
+            blanks = TaskBlank.objects.filter(task=task).order_by('order')
+            subtasks = []
+            for blank in blanks:
+                user_input = submitted_answers.get(blank.order)
+                is_correct = user_input == blank.content if user_input is not None else False
+                subtasks.append({
+                    'blank': blank,
+                    'user_input': user_input,
+                    'is_correct': is_correct
+                })
+
         raw_description = task.content
         template = Template(raw_description)
         rendered_description = template.render(Context(value_map))
@@ -743,6 +767,7 @@ class AnswerResultView(generic.View):
             'answer_options': answer_options,
             'next_task_id': next_task_id,
             'exam_info': exam_info,
+            'subtasks': subtasks
         })
 
 class RepeatIssueView(generic.View):
