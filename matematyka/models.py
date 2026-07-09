@@ -27,7 +27,7 @@ class TaskGroup(models.Model):
     Attributes:
         name (str): The name of the task group.'''
     
-    shared_content = models.CharField(max_length=100, unique=True)
+    shared_content = models.TextField()
     pieces = models.JSONField(null=True, blank=True, help_text="Wspólny wykres dla grupy zadań")
     x_min = models.FloatField(null=True, blank=True)
     x_max = models.FloatField(null=True, blank=True)    
