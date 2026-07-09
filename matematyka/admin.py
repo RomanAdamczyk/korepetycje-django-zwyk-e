@@ -6,7 +6,7 @@ class CategoryAdmin(admin.ModelAdmin):
     search_fields = ['name']
 
 class TaskGroupAdmin(admin.ModelAdmin):
-    list_display = ['id', 'shared_content']
+    list_display = ['id', 'shared_content', 'pieces', 'x_min', 'x_max']
     search_fields = ['shared_content']
 
 class TaskLevelAdmin(admin.ModelAdmin):
