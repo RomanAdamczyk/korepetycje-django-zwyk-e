@@ -7,6 +7,16 @@
     Kategorie: {{ exam_info.categories|join:", " }}
 </div>
 <div class="task-content">
+    {{ shared_description|safe }}
+    {% if shared_plot %}
+    <div style="margin: 20px 0; text-align: center;">
+        <img src="{{ shared_plot }}" alt="Wspólny wykres funkcji" style="max-width: 50%; height: auto;">
+    </div>
+    {% endif %}
+
+</div>
+
+<div class="task-content">
     {{description|safe}}
     {% if plot %}
     <div style="margin: 20px 0; text-align: center;">
@@ -51,9 +61,10 @@
             {% for blank in subtasks %}
             <div class="row">
                 <div class="col-md-1" style="text-align: right;"> {{ blank.order }}. </div>
-                 <div class="col-md-6">   {{ blank.content|safe }}</div>
+                <div class="col-md-6"> {{ blank.content|safe }}</div>
                 <div class="col-md-2">
-                    <input type="text" class="form-control mb-3" name="answer_{{ blank.order }}"  title="{{ blank.instruction|safe }}" required>
+                    <input type="text" class="form-control mb-3" name="answer_{{ blank.order }}"
+                        title="{{ blank.instruction|safe }}" required>
                 </div>
             </div>
             {% endfor %}

@@ -261,7 +261,12 @@ class StartIssueView(generic.View):
         issue = None
         answer_options = None
         subtasks = []
-        task = Task.objects.select_related('task_level', 'source', 'task_type').prefetch_related(
+        task = Task.objects.select_related(
+            'task_level',
+            'source',
+            'task_type',
+            'task_group'
+            ).prefetch_related(
                     'category').get(id=task_id)
         exam_info = {
             'number': task.sub_number,
@@ -377,6 +382,22 @@ class StartIssueView(generic.View):
         if task.pieces:
             plot = self.get_plot_for_task(task)
 
+
+        if task.task_group is not None:
+            group = task.task_group
+            if group.pieces:
+                shared_plot = self.get_plot_for_task(group)
+            else:
+                shared_plot = None
+        
+            raw_description = task.task_group.shared_content
+            template = Template(raw_description)
+            shared_rendered_description = template.render(Context(value_map))
+        else:
+            shared_rendered_description = None
+            shared_plot = None         
+
+
         context = {
             'issue': issue,
             'variables': value_map,
@@ -384,7 +405,9 @@ class StartIssueView(generic.View):
             'description': rendered_description,
             'exam_info': exam_info,
             'plot': plot,
-            'subtasks': subtasks
+            'subtasks': subtasks,
+            'shared_description': shared_rendered_description,
+            'shared_plot': shared_plot
             }
        
         return render(request, 'matematyka/issue.html', context=context)
