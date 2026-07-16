@@ -18,10 +18,10 @@ def generate_function_plot(
     show_grid: bool = True
 ):
     """
-    Rysuje wykres funkcji - zarówno zwykłej jak i kawałkami.
+    Draw a function plot based on the provided expression or pieces.
     """
     
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = plt.subplots()
     
     x_min, x_max = x_range
     x = np.linspace(x_min, x_max, 800)   # więcej punktów = lepsze zaokrąglenia na końcach
@@ -77,16 +77,32 @@ def generate_function_plot(
     ax.set_xlabel("x", fontsize=12)
     ax.set_ylabel("y", fontsize=12)
     
-    if show_grid:
-        ax.grid(True, linestyle='--', alpha=0.7)
-    
     ax.axhline(0, color='black', linewidth=1.1)
     ax.axvline(0, color='black', linewidth=1.1)
-    
+
     ax.set_xlim(x_min, x_max)
     y_min, y_max = ax.get_ylim()
     ax.set_ylim(y_min - 0.5, y_max + 0.5)
+    ax.set_aspect('equal')    
 
+    ax.set_xlim(x_min, x_max)
+    y_min, y_max = ax.get_ylim()
+    
+    y_min_adjusted = max(y_min, -7.0)
+    padding = 1.0
+    
+    ax.set_ylim(y_min_adjusted, y_max + padding)
+    ax.set_aspect('equal')
+
+
+    if show_grid:
+        x_grid = np.arange(x_min, x_max + 1, 1)
+        ax.set_xticks(x_grid)
+        y_grid = np.arange(np.floor(y_min_adjusted), np.ceil(y_max + padding) + 1, 1)   # <--- ważne!
+        ax.set_yticks(y_grid)
+        ax.grid(True, linestyle='--', alpha=0.7)
+
+      
     # Zapisywanie
     buffer = BytesIO()
     plt.savefig(buffer, format='png', dpi=200, bbox_inches='tight')
