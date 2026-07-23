@@ -21,7 +21,7 @@ def generate_function_plot(
     Draw a function plot based on the provided expression or pieces.
     """
     
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(3 , 3), dpi=200)
     
     x_min, x_max = x_range
     x = np.linspace(x_min, x_max, 800)   # więcej punktów = lepsze zaokrąglenia na końcach
@@ -74,31 +74,46 @@ def generate_function_plot(
     if title:
         ax.set_title(title, fontsize=15)
     
-    ax.set_xlabel("x", fontsize=12)
-    ax.set_ylabel("y", fontsize=12)
+    ax.set_xlabel("x", fontsize=9, rotation=0)
+    ax.set_ylabel("y", fontsize=9, rotation=0)
     
     ax.axhline(0, color='black', linewidth=1.1)
     ax.axvline(0, color='black', linewidth=1.1)
 
-    ax.set_xlim(x_min, x_max)
-    y_min, y_max = ax.get_ylim()
-    ax.set_ylim(y_min - 0.5, y_max + 0.5)
-    ax.set_aspect('equal')    
+    ax.tick_params(axis='both', which='major', labelsize=6)
 
     ax.set_xlim(x_min, x_max)
-    y_min, y_max = ax.get_ylim()
+# Zbieramy rzeczywiste wartości y (pomijamy NaN przy funkcjach kawałkami)
+    y_values = []
     
-    y_min_adjusted = max(y_min, -7.0)
-    padding = 1.0
+    # Dla wszystkich linii na wykresie
+    for line in ax.get_lines():
+        y_data = line.get_ydata()
+        if len(y_data) > 0:
+            y_values.append(y_data)
     
-    ax.set_ylim(y_min_adjusted, y_max + padding)
+    if y_values:
+        all_y = np.concatenate(y_values)
+        real_y_min = np.nanmin(all_y)
+        real_y_max = np.nanmax(all_y)
+    else:
+        # fallback gdy coś pójdzie nie tak
+        real_y_min, real_y_max = -5, 5
+
+    print(f"X: {x_min:.1f} do {x_max:.1f}")
+    print(f"Real Y min/max: {real_y_min:.2f} / {real_y_max:.2f}")
+
+    padding = 1.2
+    ax.set_ylim(real_y_min - padding, real_y_max + padding)
     ax.set_aspect('equal')
+    
+    print(f"Final Y range: {real_y_min - padding:.2f} do {real_y_max + padding:.2f}")
 
 
     if show_grid:
         x_grid = np.arange(x_min, x_max + 1, 1)
         ax.set_xticks(x_grid)
-        y_grid = np.arange(np.floor(y_min_adjusted), np.ceil(y_max + padding) + 1, 1)   # <--- ważne!
+        y_grid = np.arange(np.floor(real_y_min - padding), np.ceil(real_y_max + padding) + 1, 1)   # <--- ważne!
         ax.set_yticks(y_grid)
         ax.grid(True, linestyle='--', alpha=0.7)
 
