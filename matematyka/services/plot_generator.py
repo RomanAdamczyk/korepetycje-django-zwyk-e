@@ -100,16 +100,11 @@ def generate_function_plot(
         # fallback gdy coś pójdzie nie tak
         real_y_min, real_y_max = -5, 5
 
-    print(f"X: {x_min:.1f} do {x_max:.1f}")
-    print(f"Real Y min/max: {real_y_min:.2f} / {real_y_max:.2f}")
 
     padding = 1.2
     ax.set_ylim(real_y_min - padding, real_y_max + padding)
     ax.set_aspect('equal')
     
-    print(f"Final Y range: {real_y_min - padding:.2f} do {real_y_max + padding:.2f}")
-
-
     if show_grid:
         x_grid = np.arange(x_min, x_max + 1, 1)
         ax.set_xticks(x_grid)
