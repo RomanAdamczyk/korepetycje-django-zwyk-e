@@ -7,6 +7,7 @@ DISPLAY_FORMATS = [
 from django.db import models
 from django.contrib.auth.models import User
 from itertools import chain
+from django.core.exceptions import ValidationError
 
 class Category(models.Model):
     '''
@@ -152,6 +153,7 @@ class Variable(models.Model):
     
     Attributes:
         task (Task): The task to which the variable belongs.
+        task_group (TaskGroup): The task group to which the variable belongs.
         name (str): The name of the variable.
         original_value (float): The value of the variable.
         choices (dict): Possible choices for the variable, stored as a dictionary (JSONField).
@@ -163,6 +165,7 @@ class Variable(models.Model):
         without_value (list): List of values that should be excluded for this variable.'''
 
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='variables', null=True, blank=True)
+    task_group = models.ForeignKey(TaskGroup, on_delete=models.CASCADE, related_name='variables', null=True, blank=True)
     name = models.CharField(max_length=100)
     original_value = models.CharField(max_length=100)
     choices = models.JSONField(null=True, blank=True)
@@ -174,28 +177,57 @@ class Variable(models.Model):
     without_value = models.JSONField(default=list, blank=True) 
 
     class Meta:
-        unique_together = ('task', 'name')
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(task__isnull=False, task_group__isnull=True) |
+                    models.Q(task__isnull=True, task_group__isnull=False)
+                ),
+                name='variable_exclusive_assignment'
+            )
+        ]
 
+    def clean(self):
+        if self.task and self.task_group:
+            raise ValidationError("Zmienna nie może być przypisana jednocześnie do pojedynczego zadania i do grupy zadań.")
+        
+        if not self.task and not self.task_group:
+            raise ValidationError("Zmienna musi być przypisana albo do zadania, albo do grupy zadań.")
+        
     def __str__(self):
-        return f"Variable {self.name} with value {self.original_value}"
+        if self.task:
+            return f"Variable {self.name} for Task {self.task.id} with value {self.original_value}"
+        return f"Variable {self.name} for Task_group  {self.task_group.id} with value {self.original_value}"
 
 class AdditionalVariable(models.Model):
     '''Model representing an additional computed variable for a task.
     
     Attributes:
         task (Task): The task to which the additional variable belongs.
+        task_group (TaskGroup): The task group to which the additional variable belongs.
         name (str): The name of the additional variable.
         formula (str): The formula used to compute the additional variable.
         save_result (bool): Indicates if the result of the formula should be saved to UsedVariable (solutions not).
         split_sign (bool): Indicates if the variable should be split by sign.'''
     
-    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='additional_variables')
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='additional_variables', null=True, blank=True)
+    task_group = models.ForeignKey(TaskGroup, on_delete=models.CASCADE, related_name='additional_variables', null=True, blank=True)
     name = models.CharField(max_length=100)  # np. 'potega', 'roznica'
     formula = models.CharField(max_length=200, null=True, blank=True)  # np. 'liczba1 ** liczba2'
     split_sign = models.BooleanField(default=False)
 
+    def clean(self):
+        if self.task and self.task_group:
+            raise ValidationError("Zmienna nie może być przypisana jednocześnie do pojedynczego zadania i do grupy zadań.")
+        
+        if not self.task and not self.task_group:
+            raise ValidationError("Zmienna musi być przypisana albo do zadania, albo do grupy zadań.")
+
     def __str__(self):
-        return f"AdditionalVariable {self.name} for task {self.task.id}: {self.formula}"
+        
+        if self.task:
+            return f"AdditionalVariable {self.name} for task {self.task.id}: {self.formula}"
+        return f"AdditionalVariable {self.name} for task {self.task_group.id}: {self.formula}"
 
 class UsedVariable(models.Model):
     '''

@@ -65,7 +65,7 @@ class VariableAdmin(admin.ModelAdmin):
     list_display = ['id', 'task_id', 'name', 'min_value', 'max_value','step','choices', 'original_value', 'unique_group', 'split_sign', 'without_value']
 
     def task_id(self, obj):
-        return obj.task.id
+        return obj.task.id if obj.task else obj.task_group.id
     task_id.short_description = "Task ID"
 
     search_fields = ['name']
