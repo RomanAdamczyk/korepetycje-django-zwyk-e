@@ -10,6 +10,7 @@ from sympy import sympify, N, Symbol
 from collections import defaultdict
 from django.db.models import Count, OuterRef, Prefetch, When, Case, Value
 from django.conf import settings
+from django.db.models import Q
 
 from .models import Category, Issue, Task, UsedVariable, AnswerOption, AdditionalVariable, Variable,  Solution, AssignedTask, User
 from. models import TaskBlank, UserAnswer, UserBlankAnswer
@@ -319,10 +320,17 @@ class StartIssueView(generic.View):
             if random_param:
                 variables = self.randomize_variables(task=task)
             else:
-                variables = Variable.objects.filter(task=task)
+                q_filter = Q(task=task)
+                if task.task_group:
+                    q_filter |= Q(task_group=task.task_group)
+                variables = Variable.objects.filter(q_filter)
 
-            additional_variables = AdditionalVariable.objects.filter(task=task)
-            
+            q_filter = Q(task=task)
+            if task.task_group:
+                q_filter |= Q(task_group=task.task_group)
+
+            additional_variables = AdditionalVariable.objects.filter(q_filter)
+        
             value_map = {}
             used_variables = []
             for variable in variables:
@@ -510,7 +518,10 @@ class StartIssueView(generic.View):
 
 
     def randomize_variables(self, task):
-        variables = Variable.objects.filter(task=task)
+        q_filter = Q(task=task)
+        if task.task_group:
+            q_filter |= Q(task_group=task.task_group)
+        variables = Variable.objects.filter(q_filter)
         choices_dict= {}
         for variable in variables:
             if variable.choices:
