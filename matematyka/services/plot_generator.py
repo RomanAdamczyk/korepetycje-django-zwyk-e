@@ -13,7 +13,9 @@ import re
 from io import BytesIO
 from sympy import sympify, lambdify, Symbol
 from django.template import Template, Context
+import logging
 
+logger = logging.getLogger(__name__)
 
 
 def generate_function_plot(
@@ -129,31 +131,6 @@ def generate_function_plot(
     
     return f"data:image/png;base64,{image_base64}"
 
-# def prepare_plot_data(pieces, value_map):
-#     """
-#     Prepare the pieces data for plotting based on the provided value_map.
-#     """
-#     prepared_pieces = []
-    
-#     for piece in pieces:
-#         expr = piece['expr']
-#         domain = piece.get('domain')
-#         left_closed = piece.get('left_closed', True)
-#         right_closed = piece.get('right_closed', True)
-        
-#         # Replace variable names in the expression with their corresponding values
-#         for var_name, var_value in value_map.items():
-#             expr = expr.replace(var_name, str(var_value))
-        
-#         prepared_pieces.append({
-#             'expr': expr,
-#             'domain': domain,
-#             'left_closed': left_closed,
-#             'right_closed': right_closed
-#         })
-    
-#     return prepared_pieces
-
 def prepare_plot_data(pieces, value_map):
 
     json_pieces = json.dumps(pieces)
@@ -196,3 +173,18 @@ def prepare_plot_data(pieces, value_map):
         "x_max": x_max
     }
     
+def get_plot_for_task(task, value_map):
+    """
+    Returns base64 encoded plot for the task or None if no plot is defined.
+    """
+    if not task.pieces:
+        return None
+    try:
+        parameters = prepare_plot_data(task.pieces, value_map)
+        return generate_function_plot(
+            pieces=parameters['pieces'],
+            x_range=(parameters['x_min'], parameters['x_max']),
+        )
+    except Exception as e:
+        logger.error(f"Error generating plot for task {task.id}: {e}", exc_info=True)
+        return None

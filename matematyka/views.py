@@ -16,7 +16,7 @@ from .models import Category, Issue, Task, UsedVariable, AnswerOption, Additiona
 from. models import TaskBlank, UserAnswer, UserBlankAnswer
 from .forms import RegisterForm
 from .utils import format_value_map
-from .services.plot_generator import generate_function_plot, prepare_plot_data
+from .services.plot_generator import generate_function_plot, get_plot_for_task, prepare_plot_data
 
 import numpy as np
 import random
@@ -388,13 +388,13 @@ class StartIssueView(generic.View):
 
         plot = None
         if task.pieces:
-            plot = self.get_plot_for_task(task, value_map)
+            plot = get_plot_for_task(task, value_map)
 
 
         if task.task_group is not None:
             group = task.task_group
             if group.pieces:
-                shared_plot = self.get_plot_for_task(group, value_map)
+                shared_plot = get_plot_for_task(group, value_map)
             else:
                 shared_plot = None
         
@@ -495,22 +495,6 @@ class StartIssueView(generic.View):
         random.shuffle(answer_options)
         return answer_options
     
-    def get_plot_for_task(self, task, value_map):
-        """
-        Returns base64 encoded plot for the task or None if no plot is defined.
-        """
-        if not task.pieces:
-            return None
-        try:
-            parameters = prepare_plot_data(task.pieces, value_map)
-            return generate_function_plot(
-                pieces=parameters['pieces'],
-                x_range=(parameters['x_min'], parameters['x_max']),
-            )
-        except Exception as e:
-            logger.error(f"Error generating plot for task {task.id}: {e}", exc_info=True)
-            return None
-
 
     def randomize_variables(self, task):
         q_filter = Q(task=task)
