@@ -16,7 +16,7 @@ from .models import Category, Issue, Task, UsedVariable, AnswerOption, Additiona
 from. models import TaskBlank, UserAnswer, UserBlankAnswer
 from .forms import RegisterForm
 from .utils import format_value_map
-from .services.plot_generator import generate_function_plot
+from .services.plot_generator import generate_function_plot, prepare_plot_data
 
 import numpy as np
 import random
@@ -388,13 +388,13 @@ class StartIssueView(generic.View):
 
         plot = None
         if task.pieces:
-            plot = self.get_plot_for_task(task)
+            plot = self.get_plot_for_task(task, value_map)
 
 
         if task.task_group is not None:
             group = task.task_group
             if group.pieces:
-                shared_plot = self.get_plot_for_task(group)
+                shared_plot = self.get_plot_for_task(group, value_map)
             else:
                 shared_plot = None
         
@@ -495,22 +495,17 @@ class StartIssueView(generic.View):
         random.shuffle(answer_options)
         return answer_options
     
-    def get_plot_for_task(self, task):
+    def get_plot_for_task(self, task, value_map):
         """
         Returns base64 encoded plot for the task or None if no plot is defined.
         """
         if not task.pieces:
             return None
         try:
-            x_min = getattr(task, 'x_min')
-            if x_min is None:
-                raise ValueError(f"x_min is not defined for task {task.id}")
-            x_max = getattr(task, 'x_max')
-            if x_max is None:
-                raise ValueError(f"x_max is not defined for task {task.id}")
+            parameters = prepare_plot_data(task.pieces, value_map)
             return generate_function_plot(
-                pieces=task.pieces,
-                x_range=(x_min, x_max)
+                pieces=parameters['pieces'],
+                x_range=(parameters['x_min'], parameters['x_max']),
             )
         except Exception as e:
             logger.error(f"Error generating plot for task {task.id}: {e}", exc_info=True)

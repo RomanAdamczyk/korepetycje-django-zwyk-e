@@ -1,13 +1,19 @@
 # matematyka/services/plot_generator.py
+from turtle import left
+
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 plt.ioff()
 
-import numpy as np
-from io import BytesIO
 import base64
+import numpy as np
+import json
+import re
+from io import BytesIO
 from sympy import sympify, lambdify, Symbol
+from django.template import Template, Context
+
 
 
 def generate_function_plot(
@@ -122,3 +128,71 @@ def generate_function_plot(
     image_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
     
     return f"data:image/png;base64,{image_base64}"
+
+# def prepare_plot_data(pieces, value_map):
+#     """
+#     Prepare the pieces data for plotting based on the provided value_map.
+#     """
+#     prepared_pieces = []
+    
+#     for piece in pieces:
+#         expr = piece['expr']
+#         domain = piece.get('domain')
+#         left_closed = piece.get('left_closed', True)
+#         right_closed = piece.get('right_closed', True)
+        
+#         # Replace variable names in the expression with their corresponding values
+#         for var_name, var_value in value_map.items():
+#             expr = expr.replace(var_name, str(var_value))
+        
+#         prepared_pieces.append({
+#             'expr': expr,
+#             'domain': domain,
+#             'left_closed': left_closed,
+#             'right_closed': right_closed
+#         })
+    
+#     return prepared_pieces
+
+def prepare_plot_data(pieces, value_map):
+
+    json_pieces = json.dumps(pieces)
+    pattern = r"\{\{(\w+)\}\}"
+    values = list(set(re.findall(pattern, json_pieces))) 
+
+    missing = list(set(values) - set(value_map.keys()))
+
+    if missing:
+        raise ValueError(f"Missing values for variables: {', '.join(missing)}")
+    
+    x_min = float(value_map.get('X_MIN'))
+    x_max = float(value_map.get('X_MAX'))
+
+    prepared_pieces = []
+    for piece in pieces:
+        expr = Template(piece['expr']).render(Context(value_map))
+
+        get_domain = piece.get('domain')
+        left = get_domain[0] if get_domain else x_min
+        right = get_domain[1] if get_domain else x_max
+
+        left_float = float(Template(str(left)).render(Context(value_map)))
+        right_float = float(Template(str(right)).render(Context(value_map)))
+        domain = [left_float, right_float]
+
+        left_closed = piece.get('left_closed', True)
+        right_closed = piece.get('right_closed', True)
+
+        prepared_pieces.append({
+            'expr': expr,
+            'domain': domain,
+            'left_closed': left_closed,
+            'right_closed': right_closed
+        })
+
+    return {
+        "pieces": prepared_pieces,
+        "x_min": x_min,
+        "x_max": x_max
+    }
+    
