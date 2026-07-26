@@ -769,6 +769,24 @@ class AnswerResultView(generic.View):
                 if next_task:
                     next_task_id = next_task.id
 
+                plot = None
+        if task.pieces:
+            plot = get_plot_for_task(task, value_map)
+
+
+        if task.task_group is not None:
+            group = task.task_group
+            if group.pieces:
+                shared_plot = get_plot_for_task(group, value_map)
+            else:
+                shared_plot = None
+        
+            raw_description = task.task_group.shared_content
+            template = Template(raw_description)
+            shared_rendered_description = template.render(Context(value_map))
+        else:
+            shared_rendered_description = None
+            shared_plot = None   
 
         return render(request, 'matematyka/answer.html', {
             'issue': issue,
@@ -780,7 +798,10 @@ class AnswerResultView(generic.View):
             'answer_options': answer_options,
             'next_task_id': next_task_id,
             'exam_info': exam_info,
-            'subtasks': subtasks
+            'subtasks': subtasks,
+            'plot': plot,
+            'shared_description': shared_rendered_description,
+            'shared_plot': shared_plot,
         })
 
 class RepeatIssueView(generic.View):

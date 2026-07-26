@@ -2,11 +2,28 @@
 
 {% block content %}
 <div class="alert alert-dark mb-3">
-    {{ exam_info.level }} {{ exam_info.date|date:"d.m.Y" }} ({{ exam_info.source }}) - Zad. {{ exam_info.number }} - 
+    {{ exam_info.level }} {{ exam_info.date|date:"d.m.Y" }} ({{ exam_info.source }}) - Zad. {{ exam_info.number }} -
     Kategorie: {{ exam_info.categories|join:", " }}
 </div>
 <div class="task-content">
+    {{ shared_description|safe }}
+    {% if shared_plot %}
+    <div style="margin: 20px 0; text-align: center;">
+        <img src="{{ shared_plot }}" alt="Wspólny wykres funkcji" style="width: 100%; max-width: 400px; height: auto;">
+    </div>
+    {% endif %}
+
+</div>
+
+<div class="task-content">
     {{ description|safe }}
+
+    {% if plot %}
+    <div style="margin: 20px 0; text-align: center;">
+        <img src="{{ plot }}" alt="Wykres funkcji" style="max-width: 50%; height: auto;">
+    </div>
+    {% endif %}
+
 
     <div class="mt-3">
         {% if is_correct %}
