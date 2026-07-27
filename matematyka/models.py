@@ -360,7 +360,18 @@ class TaskBlank(models.Model):
     """
     Represents one task blank in an open-ended task.
     One Task can have multiple TaskBlank objects.
+
+    Attributes:
+        task (Task): The task to which this blank belongs.
+        order (int): The order of the blank in the task.
+        content (str): The content of the blank, visible to the student.
+        instruction (str): Additional instruction for this specific blank (optional).
+        answer_type (str): The type of the expected answer.
+        correct_value (str): The correct answer for this blank.
+        validation_rules (dict): Additional validation rules specific to this blank.
+        points (float): The number of points for a correct answer to this blank.
     """
+
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='task_blanks')
     order = models.PositiveIntegerField(default=1, help_text="Kolejność luki w zadaniu")
     content = models.TextField(help_text="Tekst luki widoczny dla ucznia (np. 'Rozwiązaniem równania f(x)=3 jest liczba ......')")
@@ -408,3 +419,15 @@ class UserBlankAnswer(models.Model):
 
     def __str__(self):
         return f"expected answer {self.expected_answer.order} - User {self.user_answer.user}"
+
+class TrueFalseStatement(models.Model):
+    """
+    Represents a statement for a True/False question.
+    """
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='true_false_statements')
+    content = models.TextField(help_text="Treść zdania")
+    is_correct = models.BooleanField(help_text="Czy zdanie jest prawdziwe?")
+    sub_number = models.IntegerField(null=True, blank=True, help_text="Numer podzadania w zadaniu typu Prawda/Fałsz")
+
+    def __str__(self):
+        return f"Statement for Task {self.task.id} no: {self.sub_number}: {self.content[:30]}..."
