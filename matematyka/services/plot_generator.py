@@ -1,6 +1,4 @@
 # matematyka/services/plot_generator.py
-from turtle import left
-
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -132,6 +130,9 @@ def generate_function_plot(
     return f"data:image/png;base64,{image_base64}"
 
 def prepare_plot_data(pieces, value_map):
+    """
+    Prepares the pieces of a piecewise function for plotting by substituting variables with their values from the value_map. It also checks for missing variables and raises an error if any are found.
+    """
 
     json_pieces = json.dumps(pieces)
     pattern = r"\{\{(\w+)\}\}"
@@ -188,3 +189,170 @@ def get_plot_for_task(task, value_map):
     except Exception as e:
         logger.error(f"Error generating plot for task {task.id}: {e}", exc_info=True)
         return None
+
+def prepare_interval_data(intervals, value_map):
+    json_intervals = json.dumps(intervals)
+    pattern = r"\{\{(\w+)\}\}"
+    values = list(set(re.findall(pattern, json_intervals)))
+
+    missing = list(set(values) - set(value_map.keys()))
+
+    if missing:
+        raise ValueError(f"Missing values for variables: {', '.join(missing)}")
+
+    x_min = float(value_map.get('X_MIN'))
+    x_max = float(value_map.get('X_MAX'))
+
+    prepared_intervals = []
+    for interval in intervals:
+        get_start = interval.get('start')
+        get_end = interval.get('end')
+
+        is_left_infinite = get_start is None or get_start == ''
+        is_right_infinite = get_end is None or get_end == ''
+
+        if is_left_infinite:
+            left = float(Template(str(x_min)).render(Context(value_map)))
+            start = None
+        else:
+            left = float(Template(str(get_start)).render(Context(value_map)))
+            start = left
+
+        if is_right_infinite:
+            right = float(Template(str(x_max)).render(Context(value_map)))
+            end = None
+        else:
+            right = float(Template(str(get_end)).render(Context(value_map)))
+            end = right
+
+        domain = [left, right]
+
+        left_closed = interval.get('left_closed', True)
+        right_closed = interval.get('right_closed', True)
+
+        prepared_intervals.append({
+            'domain': domain,
+            'left_closed': left_closed,
+            'right_closed': right_closed,
+            'start': start,
+            'end': end
+        })
+
+    return {
+        "intervals": prepared_intervals,
+        "x_min": x_min,
+        "x_max": x_max,
+    }
+
+
+def generate_interval_plot(
+    intervals: list,
+    x_range: tuple = (-5, 5),
+    title: str = None,
+    show_grid: bool = False
+):
+    """
+    Draw a number-interval plot based on the prepared interval list.
+    """
+    fig, ax = plt.subplots(figsize=(3, 3), dpi=200)
+
+    x_min, x_max = x_range
+    ax.set_xlim(x_min, x_max)
+    ax.axhline(0, color='black', linewidth=1.1)
+
+    if title:
+        ax.set_title(title, fontsize=15)
+
+    ax.set_xlabel('x', fontsize=9, rotation=0)
+    ax.set_ylabel('', fontsize=9, rotation=0)
+    ax.set_yticks([])
+    ax.get_yaxis().set_visible(False)
+
+    for interval in intervals:
+        left_domain, right_domain = interval['domain']
+
+        if right_domain < x_min or left_domain > x_max:
+            continue
+
+        left = max(left_domain, x_min)
+        right = min(right_domain, x_max)
+        if right < left:
+            continue
+
+        y = 0.5
+        ax.plot([left, right], [y, y], color='blue', linewidth=6, solid_capstyle='butt', zorder=2)
+        ax.plot([left, left], [0,y], color='blue', linewidth=2, zorder=2)
+        ax.plot([right, right], [0,y], color='blue', linewidth=2, zorder=2)
+
+        if interval['start'] is not None:
+            if interval.get('left_closed', True):
+                ax.scatter([left], [0], color='blue', s=80, zorder=3)
+            else:
+                ax.scatter([left], [0], facecolors='white', edgecolors='blue', s=80, zorder=3, linewidths=2)
+
+        if interval['end'] is not None:
+            if interval.get('right_closed', True):
+                ax.scatter([right], [0], color='blue', s=80, zorder=3)
+            else:
+                ax.scatter([right], [0], facecolors='white', edgecolors='blue', s=80, zorder=3, linewidths=2)
+
+    if show_grid:
+        x_grid = np.arange(x_min, x_max + 1, 1)
+        ax.set_xticks(x_grid)
+        ax.grid(True, linestyle='--', alpha=0.7)
+    else:
+        ax.set_xticks(np.arange(x_min, x_max + 1, 1))
+
+    ax.set_ylim(-1, 1)
+    ax.set_aspect('auto')
+
+    buffer = BytesIO()
+    plt.savefig(buffer, format='png', dpi=200, bbox_inches='tight')
+    plt.close(fig)
+
+    buffer.seek(0)
+    image_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+
+    return f"data:image/png;base64,{image_base64}"
+
+
+def get_interval_plot_for_task(task, value_map):
+    """
+    Returns base64 encoded interval plot for the task or task_group, if intervals exist.
+    """
+    intervals = []
+    if hasattr(task, 'intervals'):
+        intervals = [
+            {
+                'start': interval.start,
+                'end': interval.end,
+                'left_closed': interval.is_closed_start,
+                'right_closed': interval.is_closed_end,
+            }
+            for interval in task.intervals.all()
+        ]
+
+    if not intervals and task.task_group:
+        intervals = [
+            {
+                'start': interval.start,
+                'end': interval.end,
+                'left_closed': interval.is_closed_start,
+                'right_closed': interval.is_closed_end,
+            }
+            for interval in task.task_group.intervals.all()
+        ]
+
+    if not intervals:
+        return None
+
+    try:
+        parameters = prepare_interval_data(intervals, value_map)
+        return generate_interval_plot(
+            intervals=parameters['intervals'],
+            x_range=(parameters['x_min'], parameters['x_max']),
+        )
+    except Exception as e:
+        logger.error(f"Error generating interval plot for task {task.id}: {e}", exc_info=True)
+        return None
+

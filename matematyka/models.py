@@ -431,3 +431,17 @@ class TrueFalseStatement(models.Model):
 
     def __str__(self):
         return f"Statement for Task {self.task.id} no: {self.sub_number}: {self.content[:30]}..."
+
+class Interval(models.Model):
+    """
+    Represents an interval for a task.
+    """
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='intervals', null=True, blank=True)
+    task_group = models.ForeignKey(TaskGroup, on_delete=models.CASCADE, related_name='intervals', null=True, blank=True)
+    start = models.CharField(max_length=100, help_text="Początek przedziału")
+    end = models.CharField(max_length=100, help_text="Koniec przedziału")
+    is_closed_start = models.BooleanField(default=True, help_text="Czy przedział jest domknięty z lewej strony?")
+    is_closed_end = models.BooleanField(default=True, help_text="Czy przedział jest domknięty z prawej strony?")
+
+    def __str__(self):
+        return f"Interval for Task {self.task.id}: {self.start} to {self.end}, closed: {self.is_closed_start}, {self.is_closed_end}"
