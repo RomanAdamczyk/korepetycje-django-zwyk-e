@@ -254,10 +254,19 @@ def generate_interval_plot(
     """
     Draw a number-interval plot based on the prepared interval list.
     """
-    fig, ax = plt.subplots(figsize=(3, 3), dpi=200)
+    fig, ax = plt.subplots(figsize=(3, 1), dpi=200)
 
     x_min, x_max = x_range
     ax.set_xlim(x_min, x_max)
+
+    ax.spines['bottom'].set_position(('data', 0))
+    ax.spines['top'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+
+    ax.xaxis.set_ticks_position('bottom')
+    ax.xaxis.set_label_position('bottom')
+
     ax.axhline(0, color='black', linewidth=1.1)
 
     if title:
@@ -267,6 +276,9 @@ def generate_interval_plot(
     ax.set_ylabel('', fontsize=9, rotation=0)
     ax.set_yticks([])
     ax.get_yaxis().set_visible(False)
+    ax.tick_params(axis='x', which='major', pad=2, labelsize=8)
+
+    fig.tight_layout()
 
     for interval in intervals:
         left_domain, right_domain = interval['domain']
