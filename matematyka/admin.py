@@ -1,6 +1,6 @@
 from django.contrib import admin
 from matematyka.models import Category, TaskGroup, TaskLevel, Task, Issue, UserProfile, AssignedTask, Variable, UsedVariable, AnswerOption, UserAnswer, TaskType, AdditionalVariable, Source, Solution, TaskBlank
-from matematyka.models import UserBlankAnswer, TrueFalseStatement, Interval
+from matematyka.models import UserBlankAnswer, TrueFalseStatement, Interval, AnswerOptionInterval
 class CategoryAdmin(admin.ModelAdmin):
     list_display = ['id', 'name']
     search_fields = ['name']
@@ -128,6 +128,12 @@ class IntervalAdmin(admin.ModelAdmin):
     search_fields = ['task__content', 'task_group__name', 'start', 'end']
     list_filter = ['task__id', 'task_group__id']
 
+class AnswerOptionIntervalAdmin(admin.ModelAdmin):
+    list_display = ['id', 'answer_option__id', 'interval__id']
+    search_fields = ['interval__start']
+    list_filter = ['answer_option__id', 'interval__id']
+
+
 admin.site.register(Category, CategoryAdmin)
 admin.site.register(TaskGroup, TaskGroupAdmin) 
 admin.site.register(TaskLevel, TaskLevelAdmin)
@@ -146,3 +152,5 @@ admin.site.register(Solution, SolutionAdmin)
 admin.site.register(TaskBlank, TaskBlankAdmin)
 admin.site.register(UserBlankAnswer, UserBlankAnswerAdmin)
 admin.site.register(TrueFalseStatement, TrueFalseStatementAdmin)
+admin.site.register(Interval, IntervalAdmin)
+admin.site.register(AnswerOptionInterval, AnswerOptionIntervalAdmin)

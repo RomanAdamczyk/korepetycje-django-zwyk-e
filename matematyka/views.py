@@ -12,7 +12,7 @@ from django.db.models import Count, OuterRef, Prefetch, When, Case, Value
 from django.conf import settings
 from django.db.models import Q
 
-from .models import Category, Issue, Task, UsedVariable, AnswerOption, AdditionalVariable, Variable,  Solution, AssignedTask, User
+from .models import AnswerOptionInterval, Category, Issue, Task, UsedVariable, AnswerOption, AdditionalVariable, Variable,  Solution, AssignedTask, User
 from. models import TaskBlank, UserAnswer, UserBlankAnswer
 from .forms import RegisterForm
 from .utils import format_value_map
@@ -485,6 +485,23 @@ class StartIssueView(generic.View):
             raw_description = opt.content
             template = Template(raw_description)
             rendered_description = template.render(Context(value_map))
+
+            intervals = AnswerOptionInterval.objects.filter(answer_option=opt).select_related('interval')
+
+            if intervals.exists():
+                interval_descriptions = []
+                for interval in intervals:
+                    start = interval.interval.start
+                    end = interval.interval.end
+                    is_closed_start = interval.interval.is_closed_start
+                    is_closed_end = interval.interval.is_closed_end
+
+                    start_symbol = "[" if is_closed_start else "("
+                    end_symbol = "]" if is_closed_end else ")"
+                    interval_description = f"{start_symbol}{start}, {end}{end_symbol}"
+                    interval_descriptions.append(interval_description)
+
+                rendered_description += " (Przedziały: " + ", ".join(interval_descriptions) + ")"
            
             answer_options.append({
                 'id': opt.id,

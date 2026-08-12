@@ -1,5 +1,7 @@
 # matematyka/services/plot_generator.py
 import matplotlib
+
+from matematyka.models import AnswerOption, Task
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 plt.ioff()
@@ -328,35 +330,45 @@ def generate_interval_plot(
     return f"data:image/png;base64,{image_base64}"
 
 
-def get_interval_plot_for_task(task, value_map):
+def get_interval_plot_for_task(source, value_map):
     """
     Returns base64 encoded interval plot for the task or task_group, if intervals exist.
     """
     intervals = []
-    if hasattr(task, 'intervals'):
-        intervals = [
-            {
+    if isinstance(source, AnswerOption):
+        for link in source.answer_option_intervals.all():
+            interval = link.interval
+            intervals.append({
                 'start': interval.start,
                 'end': interval.end,
                 'left_closed': interval.is_closed_start,
                 'right_closed': interval.is_closed_end,
-            }
-            for interval in task.intervals.all()
-        ]
+            })
+    elif isinstance(source, Task):
+        if hasattr(source, 'intervals'):
+            intervals = [
+                {
+                    'start': interval.start,
+                    'end': interval.end,
+                    'left_closed': interval.is_closed_start,
+                    'right_closed': interval.is_closed_end,
+                }
+                for interval in source.intervals.all()
+            ]
 
-    if not intervals and task.task_group:
-        intervals = [
-            {
-                'start': interval.start,
-                'end': interval.end,
-                'left_closed': interval.is_closed_start,
-                'right_closed': interval.is_closed_end,
-            }
-            for interval in task.task_group.intervals.all()
-        ]
+        if not intervals and source.task_group:
+            intervals = [
+                {
+                    'start': interval.start,
+                    'end': interval.end,
+                    'left_closed': interval.is_closed_start,
+                    'right_closed': interval.is_closed_end,
+                }
+                for interval in source.task_group.intervals.all()
+            ]
 
-    if not intervals:
-        return None
+        if not intervals:
+            return None
 
     try:
         parameters = prepare_interval_data(intervals, value_map)
@@ -365,6 +377,6 @@ def get_interval_plot_for_task(task, value_map):
             x_range=(parameters['x_min'], parameters['x_max']),
         )
     except Exception as e:
-        logger.error(f"Error generating interval plot for task {task.id}: {e}", exc_info=True)
+        logger.error(f"Error generating interval plot for task {source.id}: {e}", exc_info=True)
         return None
 

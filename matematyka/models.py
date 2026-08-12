@@ -445,3 +445,14 @@ class Interval(models.Model):
 
     def __str__(self):
         return f"Interval for Task {self.task.id}: {self.start} to {self.end}, closed: {self.is_closed_start}, {self.is_closed_end}"
+
+
+class AnswerOptionInterval(models.Model):
+    """
+    Represents an interval answer option for a task.
+    """
+    answer_option = models.ForeignKey(AnswerOption, on_delete=models.CASCADE, related_name='answer_option_intervals')
+    interval = models.ForeignKey(Interval, on_delete=models.CASCADE, related_name='answer_option_intervals')
+
+    def __str__(self):
+        return f"Interval Option for Task {self.task.id}: {self.interval}"
