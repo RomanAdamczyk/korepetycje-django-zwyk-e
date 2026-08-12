@@ -295,16 +295,16 @@ def generate_interval_plot(
 
         y = 0.5
         ax.plot([left, right], [y, y], color='blue', linewidth=6, solid_capstyle='butt', zorder=2)
-        ax.plot([left, left], [0,y], color='blue', linewidth=2, zorder=2)
-        ax.plot([right, right], [0,y], color='blue', linewidth=2, zorder=2)
 
         if interval['start'] is not None:
+            ax.plot([left, left], [0,y], color='blue', linewidth=2, zorder=2)            
             if interval.get('left_closed', True):
                 ax.scatter([left], [0], color='blue', s=80, zorder=3)
             else:
                 ax.scatter([left], [0], facecolors='white', edgecolors='blue', s=80, zorder=3, linewidths=2)
 
         if interval['end'] is not None:
+            ax.plot([right, right], [0,y], color='blue', linewidth=2, zorder=2)
             if interval.get('right_closed', True):
                 ax.scatter([right], [0], color='blue', s=80, zorder=3)
             else:
