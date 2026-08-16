@@ -486,25 +486,25 @@ class StartIssueView(generic.View):
             template = Template(raw_description)
             rendered_description = template.render(Context(value_map))
 
-            intervals = AnswerOptionInterval.objects.filter(answer_option=opt).select_related('interval')
+            # intervals = AnswerOptionInterval.objects.filter(answer_option=opt).select_related('interval')
 
-            intervals_list = []
-            if intervals.exists():
-                for link in intervals:
-                    interval = link.interval
-                    intervals_list.append({
-                        'start': interval.start,
-                        'end': interval.end,
-                        'left_closed': interval.is_closed_start,
-                        'right_closed': interval.is_closed_end,
-                    })
+            # intervals_list = []
+            # if intervals.exists():
+            #     for link in intervals:
+            #         interval = link.interval
+            #         intervals_list.append({
+            #             'start': interval.start,
+            #             'end': interval.end,
+            #             'left_closed': interval.is_closed_start,
+            #             'right_closed': interval.is_closed_end,
+            #         })
                         
             answer_options.append({
                 'id': opt.id,
                 'content': rendered_description,
                 'is_correct': opt.is_correct,
                 'format': opt.display_format,
-                'intervals': intervals_list
+                # 'intervals': intervals_list
             })
         random.shuffle(answer_options)
         return answer_options

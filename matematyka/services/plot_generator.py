@@ -8,6 +8,7 @@ plt.ioff()
 
 import base64
 import numpy as np
+import plotly.express as px
 import json
 import re
 from io import BytesIO
@@ -19,119 +20,132 @@ logger = logging.getLogger(__name__)
 
 
 def generate_function_plot(
-    func_expr: str = None,           # dla zwykłych funkcji (jedna formuła)
-    pieces: list = None,             # dla funkcji kawałkami
-    x_range: tuple = (-5, 5),
-    title: str = None,
-    show_grid: bool = True
-):
+            prepared_pieces: list, x_range: tuple
+) -> str:
+
     """
     Draw a function plot based on the provided expression or pieces.
     """
-    
-    fig, ax = plt.subplots(figsize=(3 , 3), dpi=200)
-    
+
     x_min, x_max = x_range
-    x = np.linspace(x_min, x_max, 800)   # więcej punktów = lepsze zaokrąglenia na końcach
-    
-    if pieces:                           # === FUNKCJA Kawałkami ===
-        for piece in pieces:
-            expr_str = piece['expr']
-            domain = piece.get('domain')          # np. (-4, -2)
-            left_closed = piece.get('left_closed', True)
-            right_closed = piece.get('right_closed', True)
-            
-            # Tworzymy maskę
-            mask = (x >= domain[0]) & (x <= domain[1])
-            
-            if not np.any(mask):
-                continue
-                
-            x_sym = Symbol('x')
-            expr = sympify(expr_str)
-            f = lambdify(x_sym, expr, modules='numpy')
-            
-            y = f(x)
-            y = np.where(mask, y, np.nan)
-            
-            # Rysujemy linię
-            ax.plot(x, y, color='blue', linewidth=2.8)
-            
-            # Punkty na końcach
-            # Lewy koniec
-            if left_closed:
-                ax.scatter([domain[0]], [f(domain[0])], color='blue', s=80, zorder=5)
-            else:
-                ax.scatter([domain[0]], [f(domain[0])], color='white', edgecolor='blue', s=80, zorder=5, linewidth=2.5)
-            
-            # Prawy koniec
-            if right_closed:
-                ax.scatter([domain[1]], [f(domain[1])], color='blue', s=80, zorder=5)
-            else:
-                ax.scatter([domain[1]], [f(domain[1])], color='white', edgecolor='blue', s=80, zorder=5, linewidth=2.5)
-                
-    else:                                # === ZWYKŁA FUNKCJA ===
-        if func_expr:
-            x_sym = Symbol('x')
-            expr = sympify(func_expr)
-            f = lambdify(x_sym, expr, modules='numpy')
-            y = f(x)
-            ax.plot(x, y, color='blue', linewidth=2.8)
+    x_grid = np.linspace(x_min, x_max, 600)
 
-    # Ustawienia wykresu
-    if title:
-        ax.set_title(title, fontsize=15)
-    
-    ax.set_xlabel("x", fontsize=9, rotation=0)
-    ax.set_ylabel("y", fontsize=9, rotation=0)
-    
-    ax.axhline(0, color='black', linewidth=1.1)
-    ax.axvline(0, color='black', linewidth=1.1)
+    all_x, all_y, all_groups = [], [], []
+    scatter_x, scatter_y, scatter_modes = [], [], []
 
-    ax.tick_params(axis='both', which='major', labelsize=6)
+    for idx, piece in enumerate(prepared_pieces):
+        f = piece["expr"]
+        left, right = piece["domain"]
 
-    ax.set_xlim(x_min, x_max)
-# Zbieramy rzeczywiste wartości y (pomijamy NaN przy funkcjach kawałkami)
-    y_values = []
-    
-    # Dla wszystkich linii na wykresie
-    for line in ax.get_lines():
-        y_data = line.get_ydata()
-        if len(y_data) > 0:
-            y_values.append(y_data)
-    
-    if y_values:
-        all_y = np.concatenate(y_values)
-        real_y_min = np.nanmin(all_y)
-        real_y_max = np.nanmax(all_y)
+        mask = (x_grid >= left) & (x_grid <= right)
+        x_visible = x_grid[mask]
+        if len(x_visible) == 0:
+            continue
+
+        y_visible = f(x_visible)
+
+        for xv, yv in zip(x_visible, y_visible):
+            all_x.append(xv)
+            all_y.append(yv)
+            all_groups.append(f"Scrap {idx+1}")
+
+        left_dot_type = piece["left_dot"]
+        right_dot_type = piece["right_dot"]
+
+        if left_dot_type != "none":
+            scatter_x.append(left)
+            scatter_y.append(f(left))
+            scatter_modes.append(
+                "Closed" if left_dot_type == "closed" else "Open"
+            )
+
+        if right_dot_type != "none":
+            scatter_x.append(right)
+            scatter_y.append(f(right))
+            scatter_modes.append(
+                "Closed" if right_dot_type == "closed" else "Open"
+            )
+
+    fig = px.line(
+        x=all_x,
+        y=all_y,
+        color=all_groups,
+        labels={"x": "Oś X", "y": "Oś Y"},
+    )
+
+    for sx, sy, smode in zip(scatter_x, scatter_y, scatter_modes):
+        color = "#002699" if smode == "Zamalowane" else "white"
+        fig.add_scatter(
+            x=[sx],
+            y=[sy],
+            mode="markers",
+            marker=dict(
+                size=10, color=color, line=dict(width=2, color="#002699")
+            ),
+            showlegend=False,
+            # hoverinfo="skip",  # UNNOTICATE THIS LINE IF YOU WANT TO TURN OFF COORDINATE VIEWING
+        )
+
+    if all_y:
+        y_min, y_max = np.min(all_y), np.max(all_y)
+        padding = (y_max - y_min) * 0.1 if y_max != y_min else 2
+        y_range = [min(y_min - padding, -1), y_max + padding]
     else:
-        # fallback gdy coś pójdzie nie tak
-        real_y_min, real_y_max = -5, 5
-
-
-    padding = 1.2
-    ax.set_ylim(real_y_min - padding, real_y_max + padding)
-    ax.set_aspect('equal')
+        y_range = [-5, 5]
     
-    if show_grid:
-        x_grid = np.arange(x_min, x_max + 1, 1)
-        ax.set_xticks(x_grid)
-        y_grid = np.arange(np.floor(real_y_min - padding), np.ceil(real_y_max + padding) + 1, 1)   # <--- ważne!
-        ax.set_yticks(y_grid)
-        ax.grid(True, linestyle='--', alpha=0.7)
+    x_span = x_max - x_min 
+    y_span = y_range[1] - y_range[0]  
 
-      
-    # Zapisywanie
-    buffer = BytesIO()
-    plt.savefig(buffer, format='png', dpi=200, bbox_inches='tight')
-    plt.close(fig)
-    
-    buffer.seek(0)
-    image_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
-    
-    return f"data:image/png;base64,{image_base64}"
+    pixel_per_unit = 60
+    chart_width = int(x_span * pixel_per_unit) + 150  
+    chart_height = int(y_span * pixel_per_unit) + 100 
 
-def prepare_plot_data(pieces, value_map):
+    fig.update_layout(
+        plot_bgcolor="#e5e5e5",
+        paper_bgcolor="#e5e5e5",
+        
+        # === SZTYWNY ROZMIAR CAŁEGO OKNA (Zwęża i dopasowuje rysunek) ===
+        width=chart_width,
+        height=chart_height,
+        margin=dict(l=50, r=30, t=30, b=50),  # Minimalne marginesy boczne
+        
+        xaxis=dict(
+            range=[x_min, x_max],
+            gridcolor="#b0b0b0",
+            zeroline=True,
+            zerolinecolor="black",
+            zerolinewidth=1.5,
+            showticklabels=True,
+            tickmode="linear",
+            dtick=1,
+            anchor="y",
+            side="bottom",
+            constrain="domain",
+            fixedrange=True,
+            position=0,
+        ),
+        yaxis=dict(
+            range=y_range,
+            gridcolor="#b0b0b0",
+            zeroline=True,
+            zerolinecolor="black",
+            zerolinewidth=1.5,
+            scaleanchor="x",
+            scaleratio=1,
+            showticklabels=True,
+            tickmode="linear",
+            dtick=1,               
+            anchor="x",
+            side="left",
+            fixedrange=True,
+            position=0,
+        ),
+        showlegend=False,
+    )
+
+    return fig.to_html(full_html=False, include_plotlyjs="cdn")
+
+def prepare_plot_data(pieces: list, value_map: dict) -> list:
     """
     Prepares the pieces of a piecewise function for plotting by substituting variables with their values from the value_map. It also checks for missing variables and raises an error if any are found.
     """
@@ -139,59 +153,79 @@ def prepare_plot_data(pieces, value_map):
     json_pieces = json.dumps(pieces)
     pattern = r"\{\{(\w+)\}\}"
     values = list(set(re.findall(pattern, json_pieces))) 
-
     missing = list(set(values) - set(value_map.keys()))
-
     if missing:
-        raise ValueError(f"Missing values for variables: {', '.join(missing)}")
-    
-    x_min = float(value_map.get('X_MIN'))
-    x_max = float(value_map.get('X_MAX'))
+        raise ValueError(f"Brak wartości dla zmiennych: {', '.join(missing)}")    
+
+    raw_x_min = str(value_map.get("X_MIN", "-10"))
+    raw_x_max = str(value_map.get("X_MAX", "10"))
+
+    x_min = float(Template(raw_x_min).render(Context(value_map)))
+    x_max = float(Template(raw_x_max).render(Context(value_map)))
+
+    # x_min = float(rendered_x_min)
+    # x_max = float(rendered_x_max)
 
     prepared_pieces = []
     for piece in pieces:
         expr = Template(piece['expr']).render(Context(value_map))
 
+        safe_dict = {
+            "x": None,
+            "np": np,
+            "sin": np.sin,
+            "cos": np.cos,
+            "sqrt": np.sqrt,
+            "abs": np.abs,
+        }
+        func_obj = eval(f"lambda x: {expr}", {"__builtins__": None}, safe_dict)
+
         get_domain = piece.get('domain')
-        left = get_domain[0] if get_domain else x_min
-        right = get_domain[1] if get_domain else x_max
+        left = (
+            float(Template(str(get_domain[0])).render(Context(value_map)))
+            if get_domain
+            else x_min
+        )
+        right = (
+            float(Template(str(get_domain[1])).render(Context(value_map)))
+            if get_domain
+            else x_max
+        )
 
-        left_float = float(Template(str(left)).render(Context(value_map)))
-        right_float = float(Template(str(right)).render(Context(value_map)))
-        domain = [left_float, right_float]
+        prepared_pieces.append(
+            {
+                "expr": func_obj,
+                "domain": [left, right],
+                "left_dot": piece.get("left_dot", "none"),
+                "right_dot": piece.get("right_dot", "none"),
+            }
+        )
 
-        left_closed = piece.get('left_closed', True)
-        right_closed = piece.get('right_closed', True)
+    return prepared_pieces, x_min, x_max
 
-        prepared_pieces.append({
-            'expr': expr,
-            'domain': domain,
-            'left_closed': left_closed,
-            'right_closed': right_closed
-        })
-
-    return {
-        "pieces": prepared_pieces,
-        "x_min": x_min,
-        "x_max": x_max
-    }
-    
-def get_plot_for_task(task, value_map):
+def get_plot_for_task(obj, value_map):
     """
-    Returns base64 encoded plot for the task or None if no plot is defined.
+    Returns interactive Plotly HTML string for the task or task group,
+    or None if no plot is defined. Works with both Task and TaskGroup models.
     """
-    if not task.pieces:
+    if not obj.pieces:
         return None
     try:
-        parameters = prepare_plot_data(task.pieces, value_map)
+        # x_min_val = float(obj.x_min) if obj.x_min is not None else -6.0
+        # x_max_val = float(obj.x_max) if obj.x_max is not None else 6.0
+
+        # value_map["X_MIN"] = x_min_val
+        # value_map["X_MAX"] = x_max_val
+        clean_pieces, x_min, x_max = prepare_plot_data(obj.pieces, value_map)
+
         return generate_function_plot(
-            pieces=parameters['pieces'],
-            x_range=(parameters['x_min'], parameters['x_max']),
+            prepared_pieces=clean_pieces,
+            x_range=(x_min, x_max),
         )
     except Exception as e:
-        logger.error(f"Error generating plot for task {task.id}: {e}", exc_info=True)
+        logger.error(f"Error generating plot for object {obj.id}: {e}", exc_info=True)
         return None
-
+    
 def prepare_interval_data(intervals, value_map):
     json_intervals = json.dumps(intervals)
     pattern = r"\{\{(\w+)\}\}"
@@ -301,19 +335,19 @@ def generate_interval_plot(
             if interval.get('left_closed', True):
                 ax.scatter([left], [0], color='blue', s=80, zorder=3)
             else:
-                ax.scatter([left], [0], facecolors='white', edgecolors='blue', s=80, zorder=3, linewidths=2)
+                ax.scatter([left], [0],  edgecolors='blue', s=80, zorder=3, linewidths=2)
 
         if interval['end'] is not None:
             ax.plot([right, right], [0,y], color='blue', linewidth=2, zorder=2)
             if interval.get('right_closed', True):
                 ax.scatter([right], [0], color='blue', s=80, zorder=3)
             else:
-                ax.scatter([right], [0], facecolors='white', edgecolors='blue', s=80, zorder=3, linewidths=2)
+                ax.scatter([right], [0],  edgecolors='blue', s=80, zorder=3, linewidths=2)
 
     if show_grid:
         x_grid = np.arange(x_min, x_max + 1, 1)
         ax.set_xticks(x_grid)
-        ax.grid(True, linestyle='--', alpha=0.7)
+        ax.grid(True, linestyle='--', alpha=1)
     else:
         ax.set_xticks(np.arange(x_min, x_max + 1, 1))
 

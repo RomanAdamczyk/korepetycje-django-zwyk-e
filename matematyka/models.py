@@ -30,8 +30,8 @@ class TaskGroup(models.Model):
     
     shared_content = models.TextField()
     pieces = models.JSONField(null=True, blank=True, help_text="Wspólny wykres dla grupy zadań")
-    x_min = models.FloatField(null=True, blank=True)
-    x_max = models.FloatField(null=True, blank=True)    
+    x_min = models.CharField(null=True, blank=True)
+    x_max = models.CharField(null=True, blank=True)    
 
     def __str__(self):
         return self.shared_content
@@ -113,8 +113,8 @@ class Task(models.Model):
     sub_number = models.CharField(max_length=10, null=True, blank=True)
     task_type = models.ForeignKey(TaskType, on_delete=models.SET_NULL, null=True, blank=True, related_name='tasks')
     pieces = models.JSONField(null=True, blank=True, help_text="Lista kawałków funkcji do wykresu")
-    x_min = models.FloatField(null=True, blank=True, help_text="Lewy zakres osi X")
-    x_max = models.FloatField(null=True, blank=True, help_text="Prawy zakres osi X")
+    x_min = models.CharField(null=True, blank=True, help_text="Lewy zakres osi X")
+    x_max = models.CharField(null=True, blank=True, help_text="Prawy zakres osi X")
 
     def __str__(self):
         return f"id {self.id} - {self.content}"

@@ -9,9 +9,12 @@
 <div class="task-content">
     {{ shared_description|safe }}
     {% if shared_plot %}
-    <div style="margin: 20px 0; text-align: center;">
-        <img src="{{ shared_plot }}" alt="Wspólny wykres funkcji" style="width: 100%; max-width: 400px; height: auto;">
+    LOG PIECE IN TASK GROUP
+<div style="margin: 20px auto; max-width: 650px; text-align: center;">
+    <div style="border: 1px solid #b0b0b0; border-radius: 8px; overflow: hidden; background: #e5e5e5; padding: 5px; display: inline-block; width: fit-content;">
+        {{ shared_plot|safe }}
     </div>
+</div>
     {% endif %}
 
 </div>
@@ -19,9 +22,11 @@
 <div class="task-content">
     {{description|safe}}
     {% if plot %}
-    <div style="margin: 20px 0; text-align: center;">
-        <img src="{{ plot }}" alt="Wykres funkcji" style="max-width: 50%; height: auto;">
+<div style="margin: 20px auto; max-width: 650px; text-align: center;">
+    <div style="border: 1px solid #b0b0b0; border-radius: 8px; overflow: hidden; background: #e5e5e5; padding: 5px; display: inline-block; width: fit-content;">
+        {{ shared_plot|safe }}
     </div>
+</div>
     {% endif %}
 
     {% if issue.task.task_type.name == "ABCD1" %}
