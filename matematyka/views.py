@@ -842,7 +842,6 @@ class AnswerResultView(generic.View):
             'plot': plot,
             'shared_description': shared_rendered_description,
             'shared_plot': shared_plot,
-            'intervals': intervals
         })
 
 class RepeatIssueView(generic.View):
