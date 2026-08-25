@@ -455,4 +455,4 @@ class AnswerOptionInterval(models.Model):
     interval = models.ForeignKey(Interval, on_delete=models.CASCADE, related_name='answer_option_intervals')
 
     def __str__(self):
-        return f"Interval Option for Task {self.task.id}: {self.interval}"
+        return f"Interval Option for Task {self.answer_option.task.id}: {self.interval}"

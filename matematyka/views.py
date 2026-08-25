@@ -16,7 +16,7 @@ from .models import AnswerOptionInterval, Category, Issue, Task, UsedVariable, A
 from. models import TaskBlank, UserAnswer, UserBlankAnswer
 from .forms import RegisterForm
 from .utils import format_value_map
-from .services.plot_generator import generate_function_plot, get_plot_for_task, prepare_plot_data
+from .services.plot_generator import get_plot_for_task, get_interval_plot_for_task
 
 import numpy as np
 import random
@@ -299,8 +299,17 @@ class StartIssueView(generic.View):
                         for k, v in numerical_value_map.items()
                     }
                     if task.task_type.name == 'ABCD1':
-                        answer_options_db = AnswerOption.objects.filter(task=task)
+                        answer_options_db = AnswerOption.objects.prefetch_related('answer_option_intervals__interval').filter(task=task)                       
                         answer_options = self.build_answer_options(answer_options_db, symbols, value_map, substitutions)
+
+                        if answer_options and answer_options_db.exists():
+                            for answer, option_db in zip(answer_options, answer_options_db):
+              
+                                if option_db.answer_option_intervals.exists():
+                                    answer['interval_plot'] = get_interval_plot_for_task(option_db, value_map)
+                                else:
+                                    answer['interval_plot'] = None
+
                     elif task.task_type.name == 'uzupełnij':
                         task_blanks = TaskBlank.objects.filter(task=task)
                         for blank in task_blanks:
@@ -371,8 +380,19 @@ class StartIssueView(generic.View):
                 for k, v in numerical_value_map.items()
             }
             if task.task_type.name == 'ABCD1':    
-                answer_options_db = AnswerOption.objects.filter(task=task)
+                answer_options_db = AnswerOption.objects.filter(task=task).prefetch_related(
+                'answer_option_intervals__interval'
+                )
                 answer_options = self.build_answer_options(answer_options_db, solutions_map, value_map, substitutions)
+
+                if answer_options and answer_options_db.exists():
+                    for answer, option_db in zip(answer_options, answer_options_db):
+        
+                        if option_db.answer_option_intervals.exists():
+                            answer['interval_plot'] = get_interval_plot_for_task(option_db, value_map)
+                        else:
+                            answer['interval_plot'] = None
+
             elif task.task_type.name == 'uzupełnij':
                 task_blanks = TaskBlank.objects.filter(task=task)
                 for blank in task_blanks:
@@ -415,7 +435,7 @@ class StartIssueView(generic.View):
             'plot': plot,
             'subtasks': subtasks,
             'shared_description': shared_rendered_description,
-            'shared_plot': shared_plot
+            'shared_plot': shared_plot,
             }
        
         return render(request, 'matematyka/issue.html', context=context)
@@ -737,7 +757,13 @@ class AnswerResultView(generic.View):
             answer_options_db = AnswerOption.objects.filter(task=task)
             answers_instance = StartIssueView()
             answer_options = answers_instance.build_answer_options(answer_options_db, symbols, value_map, substitutions)
-
+            if answer_options and answer_options_db.exists():
+                for answer, option_db in zip(answer_options, answer_options_db):
+    
+                    if option_db.answer_option_intervals.exists():
+                        answer['interval_plot'] = get_interval_plot_for_task(option_db, value_map)
+                    else:
+                        answer['interval_plot'] = None
         elif task_type == 'uzupełnij':
             submitted_answers = request.session.get('submitted_answers', {})
             blanks = TaskBlank.objects.filter(task=task).order_by('order')
@@ -783,7 +809,7 @@ class AnswerResultView(generic.View):
                 if next_task:
                     next_task_id = next_task.id
 
-                plot = None
+        plot = None
         if task.pieces:
             plot = get_plot_for_task(task, value_map)
 
@@ -816,6 +842,7 @@ class AnswerResultView(generic.View):
             'plot': plot,
             'shared_description': shared_rendered_description,
             'shared_plot': shared_plot,
+            'intervals': intervals
         })
 
 class RepeatIssueView(generic.View):

@@ -236,133 +236,138 @@ def prepare_interval_data(intervals, value_map):
     if missing:
         raise ValueError(f"Missing values for variables: {', '.join(missing)}")
 
-    x_min = float(value_map.get('X_MIN'))
-    x_max = float(value_map.get('X_MAX'))
+    raw_x_min = str(value_map.get("X_MIN", "-10"))
+    raw_x_max = str(value_map.get("X_MAX", "10"))
+
+    x_min = float(Template(raw_x_min).render(Context(value_map)))
+    x_max = float(Template(raw_x_max).render(Context(value_map)))
 
     prepared_intervals = []
     for interval in intervals:
         get_start = interval.get('start')
         get_end = interval.get('end')
 
-        is_left_infinite = get_start is None or get_start == ''
-        is_right_infinite = get_end is None or get_end == ''
+        is_left_infinite = get_start is None or str(get_start).strip() == ''
+        is_right_infinite = get_end is None or str(get_end).strip() == ''
 
-        if is_left_infinite:
-            left = float(Template(str(x_min)).render(Context(value_map)))
-            start = None
-        else:
-            left = float(Template(str(get_start)).render(Context(value_map)))
-            start = left
+        left = x_min if is_left_infinite else float(Template(str(get_start)).render(Context(value_map)))
+        right = x_max if is_right_infinite else float(Template(str(get_end)).render(Context(value_map)))
 
-        if is_right_infinite:
-            right = float(Template(str(x_max)).render(Context(value_map)))
-            end = None
-        else:
-            right = float(Template(str(get_end)).render(Context(value_map)))
-            end = right
-
-        domain = [left, right]
-
-        left_closed = interval.get('left_closed', True)
-        right_closed = interval.get('right_closed', True)
+        left_dot = "none" if is_left_infinite else ("closed" if interval.get('left_closed', True) else "open")
+        right_dot = "none" if is_right_infinite else ("closed" if interval.get('right_closed', True) else "open")
 
         prepared_intervals.append({
-            'domain': domain,
-            'left_closed': left_closed,
-            'right_closed': right_closed,
-            'start': start,
-            'end': end
+            'domain': [left, right],
+            'left_dot': left_dot,
+            'right_dot': right_dot,
+            'is_left_infinite': is_left_infinite,
+            'is_right_infinite': is_right_infinite
         })
 
     return {
-        "intervals": prepared_intervals,
-        "x_min": x_min,
-        "x_max": x_max,
+        'intervals': prepared_intervals,
+        'x_min': x_min,
+        'x_max': x_max
     }
-
 
 def generate_interval_plot(
     intervals: list,
-    x_range: tuple = (-5, 5),
-    title: str = None,
-    show_grid: bool = False
+    x_range: tuple,
 ):
     """
     Draw a number-interval plot based on the prepared interval list.
     """
-    fig, ax = plt.subplots(figsize=(3, 1), dpi=200)
-
     x_min, x_max = x_range
-    ax.set_xlim(x_min, x_max)
+    fig = px.line()
+    y_height = 0.4
 
-    ax.spines['bottom'].set_position(('data', 0))
-    ax.spines['top'].set_visible(False)
-    ax.spines['left'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-
-    ax.xaxis.set_ticks_position('bottom')
-    ax.xaxis.set_label_position('bottom')
-
-    ax.axhline(0, color='black', linewidth=1.1)
-
-    if title:
-        ax.set_title(title, fontsize=15)
-
-    ax.set_xlabel('x', fontsize=9, rotation=0)
-    ax.set_ylabel('', fontsize=9, rotation=0)
-    ax.set_yticks([])
-    ax.get_yaxis().set_visible(False)
-    ax.tick_params(axis='x', which='major', pad=2, labelsize=8)
-
-    fig.tight_layout()
-
-    for interval in intervals:
+    for idx, interval in enumerate(intervals):
         left_domain, right_domain = interval['domain']
 
         if right_domain < x_min or left_domain > x_max:
             continue
 
-        left = max(left_domain, x_min)
-        right = min(right_domain, x_max)
-        if right < left:
-            continue
+        left_constrained = max(left_domain, x_min)
+        right_constrained = min(right_domain, x_max)
+        plot_x = []
+        plot_y = []
+        
+        if not interval['is_left_infinite']:
+            plot_x.extend([left_constrained, left_constrained])
+            plot_y.extend([0, y_height])
+        else:
+            plot_x.append(left_constrained)
+            plot_y.append(y_height)
+            
+        plot_x.append(right_constrained)
+        plot_y.append(y_height)
+        
+        if not interval['is_right_infinite']:
+            plot_x.extend([right_constrained, right_constrained])
+            plot_y.extend([y_height, 0])
 
-        y = 0.5
-        ax.plot([left, right], [y, y], color='blue', linewidth=6, solid_capstyle='butt', zorder=2)
+        # Dodajemy linię przedziału do wykresu
+        fig.add_scatter(
+            x=plot_x, y=plot_y,
+            mode="lines",
+            line=dict(width=3, color="#002699"),
+            showlegend=False,
+            hoverinfo="skip"
+        )
 
-        if interval['start'] is not None:
-            ax.plot([left, left], [0,y], color='blue', linewidth=2, zorder=2)            
-            if interval.get('left_closed', True):
-                ax.scatter([left], [0], color='blue', s=80, zorder=3)
-            else:
-                ax.scatter([left], [0],  edgecolors='blue', s=80, zorder=3, linewidths=2)
+        # 2. RYSOWANIE KROPEK NA OSI X (0)
+        # Lewa kropka
+        if interval['left_dot'] != "none":
+            color = "#002699" if interval['left_dot'] == "closed" else "#e5e5e5"
+            fig.add_scatter(
+                x=[left_constrained],
+                y=[0],
+                mode="markers",
+                marker=dict(size=12, color=color, line=dict(width=2, color="#002699")),
+                showlegend=False,
+                name="Zamalowane" if interval['left_dot'] == "closed" else "Otwarte"
+            )
 
-        if interval['end'] is not None:
-            ax.plot([right, right], [0,y], color='blue', linewidth=2, zorder=2)
-            if interval.get('right_closed', True):
-                ax.scatter([right], [0], color='blue', s=80, zorder=3)
-            else:
-                ax.scatter([right], [0],  edgecolors='blue', s=80, zorder=3, linewidths=2)
+        # Prawa kropka
+        if interval['right_dot'] != "none":
+            color = "#002699" if interval['right_dot'] == "closed" else "#e5e5e5"
+            fig.add_scatter(
+                x=[right_constrained],
+                y=[0],
+                mode="markers",
+                marker=dict(size=12, color=color, line=dict(width=2, color="#002699")),
+                showlegend=False,
+                name="Zamalowane" if interval['right_dot'] == "closed" else "Otwarte"
+            )
 
-    if show_grid:
-        x_grid = np.arange(x_min, x_max + 1, 1)
-        ax.set_xticks(x_grid)
-        ax.grid(True, linestyle='--', alpha=1)
-    else:
-        ax.set_xticks(np.arange(x_min, x_max + 1, 1))
+    # Matematyczna stylizacja osi liczbowej (wygląd jak linijka)
+    fig.update_layout(
+        plot_bgcolor="#e5e5e5",
+        paper_bgcolor="#e5e5e5",
+        height=200,   # Przedział liczbowy jest niski, nie potrzebuje dużo miejsca w pionie
+        width=int((x_max - x_min) * 50) + 100, # Elastyczna szerokość zależna od skali
+        margin=dict(l=40, r=40, t=20, b=40),
+        
+        xaxis=dict(
+            range=[x_min, x_max],
+            gridcolor="#b0b0b0",
+            showticklabels=True,
+            tickmode="linear",
+            dtick=1,
+            fixedrange=True,
+        ),
+        yaxis=dict(
+            range=[-0.2, 0.7],     # Sztywne ramy w pionie, by daszek ładnie wyglądał
+            showgrid=False,       # Ukrywamy poziome linie siatki, bo są zbędne na osi liczbowej
+            showticklabels=False,  # Ukrywamy liczby na osi Y (niepotrzebne w przedziałach)
+            fixedrange=True,
+            zeroline=True,
+            zerolinecolor="black",
+            zerolinewidth=2.5,      # Pogrubiona główna oś liczbowa
+        )
+    )
 
-    ax.set_ylim(-1, 1)
-    ax.set_aspect('auto')
-
-    buffer = BytesIO()
-    plt.savefig(buffer, format='png', dpi=200, bbox_inches='tight')
-    plt.close(fig)
-
-    buffer.seek(0)
-    image_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
-
-    return f"data:image/png;base64,{image_base64}"
-
+    return fig.to_html(full_html=False, include_plotlyjs="cdn")
 
 def get_interval_plot_for_task(source, value_map):
     """
