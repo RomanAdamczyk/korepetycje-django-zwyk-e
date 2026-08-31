@@ -458,6 +458,9 @@ class StartIssueView(generic.View):
             try:
                 numeric_result = round(float(N(evaluated)), 4)
             except TypeError as e:
+                print("--- BŁĄD SYMPY ---")
+                print(f"Wyrażenie, którego nie udało się obliczyć: {evaluated}")
+                print(f"Dostępne zmienne w value_map: {value_map}")
                 raise
             
             if numeric_result.is_integer():

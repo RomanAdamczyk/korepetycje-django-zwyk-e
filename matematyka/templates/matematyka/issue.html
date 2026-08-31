@@ -7,7 +7,9 @@
     Kategorie: {{ exam_info.categories|join:", " }}
 </div>
 <div class="task-content">
+    {% if shared_description %}
     {{ shared_description|safe }}
+    {% endif %}
     {% if shared_plot %}
 
     <div style="margin: 20px auto; max-width: 650px; text-align: center;">
