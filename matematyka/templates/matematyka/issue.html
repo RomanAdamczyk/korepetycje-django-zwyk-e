@@ -54,8 +54,8 @@
                     <!-- Fallback pokazuje surowy content -->
                     {% endif %}
                     {% if answer.interval_plot %}
-                    <div style="margin: 10px auto 0 auto; text-align: center; width: 100%;">
-                        <div style="border: 1px solid #b0b0b0; border-radius: 8px; overflow: hidden; background: #e5e5e5; padding: 5px; display: inline-block; width: fit-content; max-width: 100%;">
+                    <div class="interval-plot-wrapper">
+                        <div class="interval-plot-box">
                             {{ answer.interval_plot|safe }}
                         </div>
                     </div>

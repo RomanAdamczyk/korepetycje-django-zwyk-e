@@ -285,7 +285,7 @@ class AnswerOption(models.Model):
         is_correct (bool): Indicates if this answer option is correct.'''
     
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='answer_options')
-    content = models.TextField()
+    content = models.TextField(null=True, blank=True)
     is_correct = models.BooleanField(default=False)
     display_format = models.CharField(max_length=20, choices=DISPLAY_FORMATS, default='numeric')
 
